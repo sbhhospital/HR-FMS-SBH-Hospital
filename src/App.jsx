@@ -5,7 +5,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Indent from './pages/Indent';
-import SocialSite from './pages/SocialSite';
+// import SocialSite from './pages/SocialSite';
 import FindEnquiry from './pages/FindEnquiry';
 import CallTracker from './pages/CallTracker';
 import AfterJoiningWork from './pages/AfterJoiningWork';
@@ -18,15 +18,15 @@ import LeaveRequest from './pages/LeaveRequest';
 import MySalary from './pages/MySalary';
 import CompanyCalendar from './pages/CompanyCalendar';
 import ProtectedRoute from './components/ProtectedRoute';
-import Attendance from './pages/Attendance';
+// import Attendance from './pages/Attendance';
 import LeaveManagement from './pages/LeaveManagement';
-import Attendancedaily from './pages/Attendancedaily';
-import Report from './pages/Report';
-import Payroll from './pages/Payroll';
-import MisReport from './pages/MisReport';
+// import Attendancedaily from './pages/Attendancedaily';
+// import Report from './pages/Report';
+// import Payroll from './pages/Payroll';
+// import MisReport from './pages/MisReport';
 import Joining from './pages/Joining';
-import GatePass from './pages/GatePass';
-import GatePassRequest from './pages/GatePassRequest';
+// import GatePass from './pages/GatePass';
+// import GatePassRequest from './pages/GatePassRequest';
 
 function App() {
   return (
@@ -57,13 +57,13 @@ function App() {
             <Route path="my-salary" element={<MySalary />} />
             <Route path="company-calendar" element={<CompanyCalendar />} />
              <Route path="leave-management" element={<LeaveManagement />} />
-             <Route path="gate-pass" element={<GatePass />} />
-             <Route path="gate-pass-request" element={<GatePassRequest />} />
-              <Route path="attendance" element={<Attendance />} />
-              <Route path="attendancedaily" element={<Attendancedaily />} />
-              <Route path="report" element={<Report />} />
-              <Route path="payroll" element={<Payroll />} />
-              <Route path="misreport" element={<MisReport />} />
+             {/* <Route path="gate-pass" element={<GatePass />} /> */}
+             {/* <Route path="gate-pass-request" element={<GatePassRequest />} /> */}
+              {/* <Route path="attendance" element={<Attendance />} /> */}
+              {/* <Route path="attendancedaily" element={<Attendancedaily />} /> */}
+              {/* <Route path="report" element={<Report />} /> */}
+              {/* <Route path="payroll" element={<Payroll />} /> */}
+              {/* <Route path="misreport" element={<MisReport />} /> */}
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

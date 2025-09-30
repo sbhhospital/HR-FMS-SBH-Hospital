@@ -129,29 +129,29 @@ const toggleLanguage = () => {
     { path: '/after-leaving-work', icon: UserMinus, label: 'After Leaving Work' },
     { path: '/employee', icon: Users, label: 'Employee' },
     { path: '/leave-management', icon: BookPlus, label: 'Leave Management' },
-    { path: '/gate-pass', icon: DoorOpen, label: 'Gate Pass' },
-    {
-      type: 'dropdown',
-      icon: Book,
-      label: 'Attendance',
-      isOpen: attendanceOpen,
-      toggle: () => setAttendanceOpen(!attendanceOpen),
-      items: [
-        { path: '/attendance', label: 'Monthly' },
-        { path: '/attendancedaily', label: 'Daily' }
-      ]
-    },
+    // { path: '/gate-pass', icon: DoorOpen, label: 'Gate Pass' },
+    // {
+    //   type: 'dropdown',
+    //   icon: Book,
+    //   label: 'Attendance',
+    //   isOpen: attendanceOpen,
+    //   toggle: () => setAttendanceOpen(!attendanceOpen),
+    //   items: [
+    //     { path: '/attendance', label: 'Monthly' },
+    //     { path: '/attendancedaily', label: 'Daily' }
+    //   ]
+    // },
     // { path: '/report', icon: NotebookPen, label: 'Report' },
-    { path: '/payroll', icon: BadgeDollarSign, label: 'Payroll' },
-    { path: '/misreport', icon: AlarmClockCheck, label: 'MIS Report' },
+    // { path: '/payroll', icon: BadgeDollarSign, label: 'Payroll' },
+    // { path: '/misreport', icon: AlarmClockCheck, label: 'MIS Report' },
   ];
 
   const employeeMenuItems = [
     // { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/my-profile', icon: ProfileIcon, label: 'My Profile' },
-    { path: '/my-attendance', icon: Clock, label: 'My Attendance' },
+    // { path: '/my-attendance', icon: Clock, label: 'My Attendance' },
     { path: '/leave-request', icon: LeaveIcon, label: 'Leave Request' },
-    { path: '/gate-pass-request', icon: DoorOpen, label: 'Gate Pass Request' },
+    // { path: '/gate-pass-request', icon: DoorOpen, label: 'Gate Pass Request' },
     { path: '/my-salary', icon: DollarSign, label: 'My Salary' },
     { path: '/company-calendar', icon: Calendar, label: 'Company Calendar' },
   ];
