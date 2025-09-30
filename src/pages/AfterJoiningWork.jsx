@@ -39,7 +39,7 @@ const [formData, setFormData] = useState({
 });
 
   // Google Drive folder ID for storing images
-  const DRIVE_FOLDER_ID = "1Am4QdBpwOGyIawpmlxxVGy1Gv2sAOARU";
+  const DRIVE_FOLDER_ID = "1CJTfgIO9KaF1mVlivkoIpWj4oYmnhIG3";
 
   const fetchJoiningData = async () => {
     setLoading(true);
@@ -48,7 +48,7 @@ const [formData, setFormData] = useState({
 
     try {
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch"
+        "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=JOINING&action=fetch"
       );
 
       if (!response.ok) {
@@ -151,7 +151,7 @@ const [formData, setFormData] = useState({
 const fetchAssetsData = async (employeeId) => {
   try {
     const response = await fetch(
-      "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Assets&action=fetch"
+      "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=Assets&action=fetch"
     );
 
     if (!response.ok) {
@@ -205,7 +205,7 @@ const fetchAssetsData = async (employeeId) => {
           try {
             const base64Data = reader.result;
             const response = await fetch(
-              "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
+              "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
               {
                 method: "POST",
                 headers: {
@@ -275,7 +275,7 @@ const handleAfterJoiningClick = async (item) => {
       const assetsData = await fetchAssetsData(item.joiningNo);
 
       const fullDataResponse = await fetch(
-        "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch"
+        "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=JOINING&action=fetch"
       );
 
       if (!fullDataResponse.ok) {
@@ -440,7 +440,7 @@ const saveAssetsData = async (employeeId, employeeName, assetsData) => {
       if (existingData) {
         // Update existing record - find the row and update it
         const fetchResponse = await fetch(
-          "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Assets&action=fetch"
+          "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=Assets&action=fetch"
         );
         const result = await fetchResponse.json();
         const data = result.data || result;
@@ -453,7 +453,7 @@ const saveAssetsData = async (employeeId, employeeName, assetsData) => {
         if (rowIndex !== -1) {
           // Update existing row
           const response = await fetch(
-            "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
+            "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
             {
               method: "POST",
               headers: {
@@ -473,7 +473,7 @@ const saveAssetsData = async (employeeId, employeeName, assetsData) => {
       
       // Insert new record
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
+        "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
         {
           method: "POST",
           headers: {
@@ -533,7 +533,7 @@ const handleSubmit = async (e) => {
 
     // Continue with existing logic for updating JOINING sheet
     const fullDataResponse = await fetch(
-      "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch"
+      "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=JOINING&action=fetch"
     );
     if (!fullDataResponse.ok) {
       throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
@@ -595,7 +595,7 @@ const handleSubmit = async (e) => {
     if (allFieldsYes) {
       updatePromises.push(
         fetch(
-          "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
+          "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
           {
             method: "POST",
             headers: {
@@ -627,7 +627,7 @@ const handleSubmit = async (e) => {
     fields.forEach((field) => {
       updatePromises.push(
         fetch(
-          "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
+          "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
           {
             method: "POST",
             headers: {

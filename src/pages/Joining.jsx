@@ -213,7 +213,7 @@ const [shareFormData, setShareFormData] = useState({
 const handleShareClick = (item) => {
   setSelectedItem(item);
   // Create the share link with enquiry number
-  const shareLink = `https://hr-joining-form.vercel.app/?enquiry=${item.candidateEnquiryNo || ''}`;
+  const shareLink = `https://hr-joining-form-steel.vercel.app/?enquiry=${item.candidateEnquiryNo || ''}`;
   
   setShareFormData({
     recipientName: item.candidateName || '', // Auto-fill from Column E
@@ -241,7 +241,7 @@ const handleShareSubmit = async (e) => {
       imageUrl: selectedItem.candidatePhoto || ''
     }];
     
-    const URL = 'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec';
+    const URL = 'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec';
     
     const params = new URLSearchParams();
     params.append('action', 'shareViaEmail');
@@ -294,10 +294,10 @@ const fetchJoiningData = async () => {
   try {
     const [enquiryResponse, followUpResponse] = await Promise.all([
       fetch(
-        "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=ENQUIRY&action=fetch"
+        "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=ENQUIRY&action=fetch"
       ),
       fetch(
-        "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Follow - Up&action=fetch"
+        "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=Follow - Up&action=fetch"
       ),
     ]);
 
@@ -575,7 +575,7 @@ const formatDateForStorage = (dateString) => {
   };
 
   const postToJoiningSheet = async (rowData) => {
-    const URL = 'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec';
+    const URL = 'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec';
 
     try {
       console.log('Attempting to post:', {
@@ -620,7 +620,7 @@ const formatDateForStorage = (dateString) => {
     }
   };
 
-  const uploadFileToDrive = async (file, folderId = '1Jk4XQKvq4QQRC7COAcajUReoX7zbQtW0') => {
+  const uploadFileToDrive = async (file, folderId = '1zYLVLGQfuCUyEzLfyJWM7o67kN3JBQMs') => {
     try {
       const reader = new FileReader();
       const base64Data = await new Promise((resolve, reject) => {
@@ -637,7 +637,7 @@ const formatDateForStorage = (dateString) => {
       params.append('folderId', folderId);
 
       const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec',
+        'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec',
         {
           method: 'POST',
           headers: {
@@ -666,7 +666,7 @@ const formatDateForStorage = (dateString) => {
   };
 
 const updateEnquirySheet = async (enquiryNo, timestamp) => {
-  const URL = 'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec';
+  const URL = 'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec';
 
   try {
     const params = new URLSearchParams();
@@ -1469,7 +1469,7 @@ const handleJoiningSubmit = async (e) => {
   <div className="text-sm text-gray-600 space-y-1">
     <div className="flex items-center">
       <a 
-        href="https://hr-joining-form.vercel.app/" 
+        href="https://hr-joining-form-steel.vercel.app/" 
         target="_blank" 
         rel="noopener noreferrer"
         className="text-indigo-600 hover:text-indigo-800"
