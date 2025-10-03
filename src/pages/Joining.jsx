@@ -704,7 +704,8 @@ const handleJoiningSubmit = async (e) => {
     const uploadPromises = {};
     const fileFields = [
       'aadharFrontPhoto',
-      'bankPassbookPhoto'
+      'bankPassbookPhoto',
+      'salarySlip' 
     ];
 
     for (const field of fileFields) {
@@ -777,7 +778,7 @@ const handleJoiningSubmit = async (e) => {
     
     // Assign values directly to array indices according to specified columns
     rowData[0] = formattedTimestamp;           // Column A: Timestamp
-    rowData[1] = joiningFormData.joiningId;    // Column B: Joining ID
+    rowData[1] = "";
     rowData[2] = selectedItem.candidateName;   // Column C: Name As Per Aadhar
     rowData[3] = joiningFormData.fatherName;   // Column D: Father Name
     rowData[4] = formatDateForStorage(joiningFormData.dateOfJoining); // Column E: Date Of Joining (mm/dd/yyyy)
@@ -803,6 +804,7 @@ const handleJoiningSubmit = async (e) => {
     rowData[24] = "";
     rowData[25] = "";
     rowData[26] = selectedItem.actualDate || formattedTimestamp; // Column AA: Actual Date
+    rowData[38] = fileUrls.salarySlip || "";    // Column AM: Last Salary Slip
 
     await postToJoiningSheet(rowData);
 
@@ -1049,9 +1051,9 @@ const handleJoiningSubmit = async (e) => {
             <form onSubmit={handleJoiningSubmit} className="p-6 space-y-6">
               {/* Section 1: Basic Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Joining ID (जॉइनिंग आईडी)
+                    Joining ID
                   </label>
                   <input
                     type="text"
@@ -1060,11 +1062,11 @@ const handleJoiningSubmit = async (e) => {
                     onChange={handleJoiningInputChange}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
                   />
-                </div>
+                </div> */}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name As Per Aadhar (नाम आधार के अनुसार)
+                    Name As Per Aadhar
                   </label>
                   <input
                     type="text"
@@ -1075,7 +1077,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Father Name (पिता का नाम)
+                    Father Name
                   </label>
                   <input
                     type="text"
@@ -1087,7 +1089,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date Of Birth As per Aadhar (जन्मतिथि आधार के अनुसार)
+                    Date Of Birth As per Aadhar
                   </label>
                   <input
                     type="text"
@@ -1098,7 +1100,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Gender (लिंग)
+                    Gender
                   </label>
                   <select
                     name="gender"
@@ -1106,15 +1108,15 @@ const handleJoiningSubmit = async (e) => {
                     onChange={handleJoiningInputChange}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
                   >
-                    <option value="">Select Gender (लिंग चुनें)</option>
-                    <option value="Male">Male (पुरुष)</option>
-                    <option value="Female">Female (महिला) </option>
-                    <option value="Other">Other (अन्य)</option>
+                    <option value="">Select Gender </option>
+                    <option value="Male">Male </option>
+                    <option value="Female">Female </option>
+                    <option value="Other">Other </option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Department (विभाग)
+                    Department
                   </label>
                   <input
                     type="text"
@@ -1125,7 +1127,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Equipment (उपकरण)
+                    Equipment
                   </label>
                   <input
                     type="text"
@@ -1141,7 +1143,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mobile No. (मोबाइल नंबर)
+                    Mobile No.
                   </label>
                   <input
                     type="tel"
@@ -1152,7 +1154,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Personal Email (ईमेल)
+                    Personal Email
                   </label>
                   <input
                     type="email"
@@ -1163,7 +1165,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Family Mobile Number (परिवार का मोबाइल नंबर)
+                    Family Mobile Number
                   </label>
                   <input
                     name="familyMobileNo"
@@ -1174,7 +1176,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Relationship With Family (परिवार के साथ संबंध)
+                    Relationship With Family
                   </label>
                   <input
                     name="relationshipWithFamily"
@@ -1189,7 +1191,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Current Address (वर्त्तमान पता)
+                    Current Address
                   </label>
                   <textarea
                     disabled
@@ -1204,7 +1206,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date Of Joining (शामिल होने की तारीख)
+                    Date Of Joining
                   </label>
                   <input
                     type="date"
@@ -1216,7 +1218,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Designation (पद का नाम)
+                    Designation
                   </label>
                   <input
                     type="text"
@@ -1227,7 +1229,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Highest Qualification (उच्चतम योग्यता)
+                    Highest Qualification
                   </label>
                   <input
                     name="highestQualification"
@@ -1242,7 +1244,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Aadhar Card Number (आधार कार्ड नंबर)
+                    Aadhar Card Number
                   </label>
                   <input
                     disabled
@@ -1252,7 +1254,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Current Bank Account No (बैंक खाता संख्या)
+                    Current Bank Account No
                   </label>
                   <input
                     name="currentBankAc"
@@ -1263,7 +1265,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    IFSC Code (आईएफएससी कोड)
+                    IFSC Code
                   </label>
                   <input
                     name="ifscCode"
@@ -1274,7 +1276,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Branch Name (शाखा का नाम)
+                    Branch Name
                   </label>
                   <input
                     name="branchName"
@@ -1289,7 +1291,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Aadhar Card (आधार कार्ड)
+                    Aadhar Card
                   </label>
                   <div className="flex items-center space-x-2">
                     <input
@@ -1304,7 +1306,7 @@ const handleJoiningSubmit = async (e) => {
                       className="flex items-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 text-gray-700"
                     >
                       <Upload size={16} className="mr-2" />
-                      Upload Photo (फोटो अपलोड करें)
+                      Upload Photo
                     </label>
                     {joiningFormData.aadharFrontPhoto && (
                       <span className="text-sm text-gray-700">
@@ -1315,7 +1317,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Photo Of Front Bank Passbook (बैंक पासबुक की फ़ोटो)
+                    Photo Of Front Bank Passbook
                   </label>
                   <div className="flex items-center space-x-2">
                     <input
@@ -1335,6 +1337,32 @@ const handleJoiningSubmit = async (e) => {
                     {joiningFormData.bankPassbookPhoto && (
                       <span className="text-sm text-gray-700">
                         {joiningFormData.bankPassbookPhoto.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Salary Slip
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => handleFileChange(e, "salarySlip")}
+                      className="hidden"
+                      id="salary-slip-upload"
+                    />
+                    <label
+                      htmlFor="salary-slip-upload"
+                      className="flex items-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 text-gray-700"
+                    >
+                      <Upload size={16} className="mr-2" />
+                      Upload Salary Slip
+                    </label>
+                    {joiningFormData.salarySlip && (
+                      <span className="text-sm text-gray-700">
+                        {joiningFormData.salarySlip.name}
                       </span>
                     )}
                   </div>
@@ -1392,142 +1420,142 @@ const handleJoiningSubmit = async (e) => {
       )}
 
       {showShareModal && selectedItem && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-      <div className="flex justify-between items-center p-6 border-b border-gray-300">
-        <h3 className="text-lg font-medium text-gray-900">
-          Share Candidate Details
-        </h3>
-        <button
-          onClick={() => setShowShareModal(false)}
-          className="text-gray-500 hover:text-gray-700"
-        >
-          <X size={20} />
-        </button>
-      </div>
-      <form onSubmit={handleShareSubmit} className="p-6 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Recipient Name *
-          </label>
-          <input
-            type="text"
-            name="recipientName"
-            value={shareFormData.recipientName}
-            onChange={handleShareInputChange}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-            required
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email Address *
-          </label>
-          <input
-            type="email"
-            name="recipientEmail"
-            value={shareFormData.recipientEmail}
-            onChange={handleShareInputChange}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-            required
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Subject *
-          </label>
-          <input
-            type="text"
-            name="subject"
-            value={shareFormData.subject}
-            onChange={handleShareInputChange}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-            required
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Message *
-          </label>
-          <textarea
-            name="message"
-            value={shareFormData.message}
-            onChange={handleShareInputChange}
-            rows={5}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-            required
-          />
-        </div>
-        
-        <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Attached Links
-  </label>
-  <div className="text-sm text-gray-600 space-y-1">
-    <div className="flex items-center">
-      <a 
-        href="https://hr-joining-form-steel.vercel.app/" 
-        target="_blank" 
-        rel="noopener noreferrer"
-        className="text-indigo-600 hover:text-indigo-800"
-      >
-        Joining Form Link
-      </a>
-    </div>
-  </div>
-</div>
-        
-        <div className="flex justify-end space-x-2 pt-4">
-          <button
-            type="button"
-            onClick={() => setShowShareModal(false)}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className={`px-4 py-2 text-white bg-indigo-700 rounded-md hover:bg-indigo-800 flex items-center justify-center min-h-[42px] ${
-              submitting ? "opacity-90 cursor-not-allowed" : ""
-            }`}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <>
-                <svg
-                  className="animate-spin h-4 w-4 text-white mr-2"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+            <div className="flex justify-between items-center p-6 border-b border-gray-300">
+              <h3 className="text-lg font-medium text-gray-900">
+                Share Candidate Details
+              </h3>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleShareSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Recipient Name *
+                </label>
+                <input
+                  type="text"
+                  name="recipientName"
+                  value={shareFormData.recipientName}
+                  onChange={handleShareInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  name="recipientEmail"
+                  value={shareFormData.recipientEmail}
+                  onChange={handleShareInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Subject *
+                </label>
+                <input
+                  type="text"
+                  name="subject"
+                  value={shareFormData.subject}
+                  onChange={handleShareInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Message *
+                </label>
+                <textarea
+                  name="message"
+                  value={shareFormData.message}
+                  onChange={handleShareInputChange}
+                  rows={5}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Attached Links
+                </label>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <div className="flex items-center">
+                    <a
+                      href="https://hr-joining-form-steel.vercel.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:text-indigo-800"
+                    >
+                      Joining Form Link
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowShareModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                 >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Sending...
-              </>
-            ) : (
-              "Send Email"
-            )}
-          </button>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={`px-4 py-2 text-white bg-indigo-700 rounded-md hover:bg-indigo-800 flex items-center justify-center min-h-[42px] ${
+                    submitting ? "opacity-90 cursor-not-allowed" : ""
+                  }`}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <svg
+                        className="animate-spin h-4 w-4 text-white mr-2"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Email"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </form>
-    </div>
-  </div>
-)}
+      )}
     </div>
   );
 };

@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  FileText, 
-  Globe,
+  FileText,
   Search,
   Phone,
   UserCheck,
@@ -12,21 +11,18 @@ import {
   AlarmClockCheck,
   Users,
   Calendar,
-  DollarSign,
   FileText as LeaveIcon,
   User as ProfileIcon,
-  Clock,
   LogOut as LogOutIcon,
   X,
-  DoorOpen,
+  Copyright,
   User,
   Menu,
   ChevronDown,
   ChevronUp,
   NotebookPen,
-  Book,
-  BadgeDollarSign,
-  BookPlus
+  BookPlus,
+  Brain
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 
@@ -49,74 +45,80 @@ const Sidebar = ({ onClose }) => {
 
  useEffect(() => {
   const hasSeenLanguageHint = localStorage.getItem('hasSeenLanguageHint');
+  
   if (!hasSeenLanguageHint && currentLang === 'en') {
-    setShowLanguageHint(true);
+    const timer = setTimeout(() => {
+      setShowLanguageHint(true);
+    }, 5000);
+
+    return () => clearTimeout(timer);
   } else {
     setShowLanguageHint(false);
   }
 }, [currentLang]);
+
   
-useEffect(() => {
-  const hideStyles = document.createElement('style');
-  hideStyles.innerHTML = `
-    .goog-te-banner-frame.skiptranslate { display: none !important; }
-    body { top: 0 !important; }
-    #google_translate_element { display: none !important; }
-  `;
-  document.head.appendChild(hideStyles);
+// useEffect(() => {
+//   const hideStyles = document.createElement('style');
+//   hideStyles.innerHTML = `
+//     .goog-te-banner-frame.skiptranslate { display: none !important; }
+//     body { top: 0 !important; }
+//     #google_translate_element { display: none !important; }
+//   `;
+//   document.head.appendChild(hideStyles);
 
-  window.googleTranslateElementInit = () => {
-    if (window.google && window.google.translate && window.google.translate.TranslateElement) {
-      new window.google.translate.TranslateElement(
-        { pageLanguage: 'en', includedLanguages: 'en,hi', autoDisplay: false },
-        'google_translate_element'
-      );
-    }
-  };
+//   window.googleTranslateElementInit = () => {
+//     if (window.google && window.google.translate && window.google.translate.TranslateElement) {
+//       new window.google.translate.TranslateElement(
+//         { pageLanguage: 'en', includedLanguages: 'en,hi', autoDisplay: false },
+//         'google_translate_element'
+//       );
+//     }
+//   };
 
-  if (!document.querySelector('script[src*="translate_a/element.js"]')) {
-    const script = document.createElement('script');
-    script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-    script.async = true;
-    document.body.appendChild(script);
-  }
+//   if (!document.querySelector('script[src*="translate_a/element.js"]')) {
+//     const script = document.createElement('script');
+//     script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+//     script.async = true;
+//     document.body.appendChild(script);
+//   }
 
-  return () => {
-  };
-}, []);
+//   return () => {
+//   };
+// }, []);
 
-const toggleLanguage = () => {
-  const next = currentLang === 'en' ? 'hi' : 'en';
-  setCurrentLang(next);
+// const toggleLanguage = () => {
+//   const next = currentLang === 'en' ? 'hi' : 'en';
+//   setCurrentLang(next);
   
-  // Hide the hint when switching to Hindi or when language is toggled
-  if (showLanguageHint) {
-    setShowLanguageHint(false);
-    localStorage.setItem('hasSeenLanguageHint', 'true');
-  }
+//   // Hide the hint when switching to Hindi or when language is toggled
+//   if (showLanguageHint) {
+//     setShowLanguageHint(false);
+//     localStorage.setItem('hasSeenLanguageHint', 'true');
+//   }
 
-  const cookieValue = `/en/${next}`;
-  const hostname = location.hostname;
-  const domainPart = (hostname === 'localhost' || !hostname) ? '' : `;domain=.${hostname}`;
-  document.cookie = `googtrans=${cookieValue}${domainPart};path=/;max-age=31536000`;
-  document.cookie = `googtrans=${cookieValue};path=/;max-age=31536000`;
+//   const cookieValue = `/en/${next}`;
+//   const hostname = location.hostname;
+//   const domainPart = (hostname === 'localhost' || !hostname) ? '' : `;domain=.${hostname}`;
+//   document.cookie = `googtrans=${cookieValue}${domainPart};path=/;max-age=31536000`;
+//   document.cookie = `googtrans=${cookieValue};path=/;max-age=31536000`;
 
-  try {
-    if (typeof window.doGTranslate === 'function') {
-      window.doGTranslate(`en|${next}`);
-      return;
-    }
+//   try {
+//     if (typeof window.doGTranslate === 'function') {
+//       window.doGTranslate(`en|${next}`);
+//       return;
+//     }
 
-    const sel = document.querySelector('#google_translate_element select');
-    if (sel) {
-      sel.value = next;
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
-      return;
-    }
-  } catch (e) {
-  }
-  window.location.reload();
-};
+//     const sel = document.querySelector('#google_translate_element select');
+//     if (sel) {
+//       sel.value = next;
+//       sel.dispatchEvent(new Event('change', { bubbles: true }));
+//       return;
+//     }
+//   } catch (e) {
+//   }
+//   window.location.reload();
+// };
 
   const adminMenuItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -129,6 +131,7 @@ const toggleLanguage = () => {
     { path: '/after-leaving-work', icon: UserMinus, label: 'After Leaving Work' },
     { path: '/employee', icon: Users, label: 'Employee' },
     { path: '/leave-management', icon: BookPlus, label: 'Leave Management' },
+    { path: '/jobPoster', icon: Brain, label: 'Creative' },
     // { path: '/gate-pass', icon: DoorOpen, label: 'Gate Pass' },
     // {
     //   type: 'dropdown',
@@ -144,6 +147,7 @@ const toggleLanguage = () => {
     // { path: '/report', icon: NotebookPen, label: 'Report' },
     // { path: '/payroll', icon: BadgeDollarSign, label: 'Payroll' },
     // { path: '/misreport', icon: AlarmClockCheck, label: 'MIS Report' },
+    { path: '/license', icon: AlarmClockCheck, label: 'License' },
   ];
 
   const employeeMenuItems = [
@@ -152,8 +156,9 @@ const toggleLanguage = () => {
     // { path: '/my-attendance', icon: Clock, label: 'My Attendance' },
     { path: '/leave-request', icon: LeaveIcon, label: 'Leave Request' },
     // { path: '/gate-pass-request', icon: DoorOpen, label: 'Gate Pass Request' },
-    { path: '/my-salary', icon: DollarSign, label: 'My Salary' },
+    // { path: '/my-salary', icon: DollarSign, label: 'My Salary' },
     { path: '/company-calendar', icon: Calendar, label: 'Company Calendar' },
+    { path: '/license', icon: Copyright, label: 'License' },
   ];
 
   const menuItems = user?.Admin === 'Yes' ? adminMenuItems : employeeMenuItems;
@@ -166,7 +171,7 @@ const SidebarContent = ({ onClose, isCollapsed = false }) => (
         <h1 className="text-xl font-bold flex items-center gap-2 text-white">
           <Users size={24} />
           <span>HR FMS</span>
-          <div className="relative">
+          {/* <div className="relative">
   <button
     onClick={toggleLanguage}
     className="p-2 rounded-md hover:bg-indigo-800 transition relative"
@@ -176,15 +181,11 @@ const SidebarContent = ({ onClose, isCollapsed = false }) => (
     <Globe size={20} />
   </button>
   
-  {/* Language hint tooltip */}
   {showLanguageHint && currentLang === 'en' && (
   <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-50">
-    {/* Arrow pointing up */}
     <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
       <div className="w-0 h-0 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent border-b-orange-500"></div>
     </div>
-      
-      {/* Tooltip content */}
       <div className="bg-orange-500 text-white px-3 py-2 rounded-lg shadow-lg whitespace-nowrap text-sm font-medium">
         हिंदी के लिए क्लिक करें
         <button
@@ -199,8 +200,8 @@ const SidebarContent = ({ onClose, isCollapsed = false }) => (
       </div>
     </div>
   )}
-</div>
-      <div id="google_translate_element" style={{ display: 'none' }} />
+</div> */}
+      <div style={{ display: 'none' }} />
           {user?.role === 'employee' && (
             <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">Employee</span>
           )}

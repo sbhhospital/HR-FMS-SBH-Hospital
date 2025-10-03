@@ -561,7 +561,7 @@ const handleSubmit = async (e) => {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">SKA-Joining ID</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Joining ID</label>
                 <input
                   type="text"
                   value={selectedItem.employeeNo}
@@ -570,7 +570,7 @@ const handleSubmit = async (e) => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name (नाम) </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                 <input
                   type="text"
                   value={selectedItem.candidateName}
@@ -579,7 +579,7 @@ const handleSubmit = async (e) => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Date Of Leaving (छोड़ने का दिनांक) *</label>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Date Of Leaving *</label>
                 <input
                   type="date"
                   name="dateOfLeaving"
@@ -590,7 +590,7 @@ const handleSubmit = async (e) => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Mobile Number (मोबाइल नंबर) </label>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Mobile Number</label>
                 <input
                   type="tel"
                   name="mobileNumber"
@@ -600,7 +600,7 @@ const handleSubmit = async (e) => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reason Of Leaving (छोड़ने का कारण) *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason Of Leaving*</label>
                 <textarea
                   name="reasonOfLeaving"
                   value={formData.reasonOfLeaving}

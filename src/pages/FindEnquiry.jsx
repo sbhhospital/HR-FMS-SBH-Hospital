@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Clock, CheckCircle, X, Upload } from 'lucide-react';
+import { Search, Clock, CheckCircle, X, Upload, Share } from 'lucide-react';
 import useDataStore from '../store/dataStore';
 import toast from 'react-hot-toast';
 
@@ -17,6 +17,13 @@ const FindEnquiry = () => {
   const [generatedCandidateNo, setGeneratedCandidateNo] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingResume, setUploadingResume] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+const [shareFormData, setShareFormData] = useState({
+  recipientName: '',
+  recipientEmail: '',
+  subject: 'Candidate Enquiry Details',
+  message: 'Please find the candidate enquiry details attached below.',
+});
 
 const [formData, setFormData] = useState({
   candidateName: '',
@@ -359,6 +366,77 @@ const fetchAllData = async () => {
     return `${day}-${month}-${year}`;
   };
 
+  const handleShareClick = (item) => {
+  setSelectedItem(item);
+  // Create the share link with enquiry number
+  const shareLink = `https://hr-enquiry-form.vercel.app/`;
+  
+  setShareFormData({
+    message: `Dear Recipient,\n\nPlease fill the enquiry details for candidate who is applying for the position of ${item.post}.\n\nEnquiry Form Link: ${shareLink}\n\nBest regards,\nHR Team SBH Hospital Raipur (C.G.)`,
+  });
+  
+  console.log("Share Link:", shareLink);
+  setShowShareModal(true);
+};
+
+const handleShareSubmit = async (e) => {
+  e.preventDefault();
+  setSubmitting(true);
+  
+  try {
+    const documents = [{
+      name: selectedItem.candidateName,
+      serialNo: selectedItem.candidateEnquiryNo,
+      documentType: selectedItem.applyingForPost,
+      category: selectedItem.department,
+      imageUrl: selectedItem.candidatePhoto || ''
+    }];
+    
+    const URL = 'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec';
+    
+    const params = new URLSearchParams();
+    params.append('action', 'shareViaEmail');
+    params.append('recipientEmail', shareFormData.recipientEmail);
+    params.append('subject', shareFormData.subject);
+    params.append('message', shareFormData.message);
+    params.append('documents', JSON.stringify(documents));
+    
+    const response = await fetch(URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params,
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to send email');
+    }
+    
+    toast.success('Details shared successfully!');
+    setShowShareModal(false);
+  } catch (error) {
+    console.error('Error sharing details:', error);
+    toast.error(`Failed to share details: ${error.message}`);
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+const handleShareInputChange = (e) => {
+  const { name, value } = e.target;
+  setShareFormData(prev => ({
+    ...prev,
+    [name]: value
+  }));
+};
+
 const handleSubmit = async (e) => {
   e.preventDefault();
   setSubmitting(true);
@@ -671,13 +749,13 @@ const handleSubmit = async (e) => {
                       Action
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
-                      Indent No. 
+                      Indent No.
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
-                      Post 
+                      Post
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
-                      Department 
+                      Department
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
                       Gender
@@ -717,12 +795,21 @@ const handleSubmit = async (e) => {
                     filteredPendingData.map((item) => (
                       <tr key={item.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <button
-                            onClick={() => handleEnquiryClick(item)}
-                            className="px-3 py-1 text-white bg-indigo-700 rounded-md hover:bg-opacity-90 text-sm"
-                          >
-                            Enquiry
-                          </button>
+                          <div className="flex items-center space-x-3">
+                            <button
+                              onClick={() => handleEnquiryClick(item)}
+                              className="px-4 py-2 text-white bg-indigo-700 rounded-md hover:bg-opacity-90 text-sm min-w-[80px]"
+                            >
+                              Enquiry
+                            </button>
+                            <button
+                              onClick={() => handleShareClick(item)}
+                              className="px-4 py-2 text-white bg-green-600 rounded-md hover:bg-opacity-90 text-sm min-w-[80px] flex items-center justify-center"
+                            >
+                              <Share size={14} className="mr-1" />
+                              Share
+                            </button>
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {item.indentNo}
@@ -892,7 +979,7 @@ const handleSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Indent No. (इंडेंट नंबर)
+                    Indent No.
                   </label>
                   <input
                     type="text"
@@ -903,7 +990,7 @@ const handleSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Candidate Enquiry No. (उम्मीदवार इन्क्वायरी संख्या)
+                    Candidate Enquiry No.
                   </label>
                   <input
                     type="text"
@@ -914,7 +1001,7 @@ const handleSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Applying For Post (पद के लिए आवेदन)
+                    Applying For Post
                   </label>
                   <input
                     type="text"
@@ -929,20 +1016,20 @@ const handleSubmit = async (e) => {
                   />
                 </div>
                 <div>
-  <label className="block text-sm font-medium text-gray-500 mb-1">
-    Department (विभाग)
-  </label>
-  <input
-    type="text"
-    name="department"
-    value={formData.department}
-    onChange={handleInputChange}
-    className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500"
-  />
-</div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Department
+                  </label>
+                  <input
+                    type="text"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500"
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Candidate Name (उम्मीदवार का नाम) *
+                    Candidate Name*
                   </label>
                   <input
                     type="text"
@@ -955,7 +1042,7 @@ const handleSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Candidate DOB (उम्मीदवार की जन्मतिथि)
+                    Candidate DOB
                   </label>
                   <input
                     type="date"
@@ -967,7 +1054,7 @@ const handleSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Candidate Phone (उम्मीदवार का फ़ोन) *
+                    Candidate Phone*
                   </label>
                   <input
                     type="tel"
@@ -980,7 +1067,7 @@ const handleSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Candidate Email (उम्मीदवार ईमेल)
+                    Candidate Email
                   </label>
                   <input
                     type="email"
@@ -992,7 +1079,7 @@ const handleSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Previous Company (पिछली कंपनी)
+                    Previous Company
                   </label>
                   <input
                     type="text"
@@ -1004,7 +1091,7 @@ const handleSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Job Experience (काम का अनुभव)
+                    Job Experience
                   </label>
                   <input
                     type="text"
@@ -1016,7 +1103,7 @@ const handleSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Previous Position (पिछला पद)
+                    Previous Position
                   </label>
                   <input
                     type="text"
@@ -1028,7 +1115,7 @@ const handleSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Marital Status (वैवाहिक स्थिति)
+                    Marital Status
                   </label>
                   <select
                     name="maritalStatus"
@@ -1044,7 +1131,7 @@ const handleSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Aadhar No. (आधार नं) *
+                    Aadhar No.*
                   </label>
                   <input
                     type="text"
@@ -1059,7 +1146,7 @@ const handleSubmit = async (e) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-500 mb-1">
-                  Current Address (वर्त्तमान पता)
+                  Current Address
                 </label>
                 <textarea
                   name="presentAddress"
@@ -1073,7 +1160,7 @@ const handleSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Candidate Photo (उम्मीदवार फोटो)
+                    Candidate Photo
                   </label>
                   <div className="flex items-center space-x-2">
                     <input
@@ -1110,7 +1197,7 @@ const handleSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Candidate Resume (उम्मीदवार का बायोडाटा)
+                    Candidate Resume
                   </label>
                   <div className="flex items-center space-x-2">
                     <input
@@ -1149,7 +1236,7 @@ const handleSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Status (स्थिति) *
+                    Status*
                   </label>
                   <select
                     name="status"
@@ -1204,6 +1291,144 @@ const handleSubmit = async (e) => {
                     </>
                   ) : (
                     "Submit"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showShareModal && selectedItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+            <div className="flex justify-between items-center p-6 border-b border-gray-300">
+              <h3 className="text-lg font-medium text-gray-900">
+                Share Candidate Details
+              </h3>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleShareSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Recipient Name *
+                </label>
+                <input
+                  type="text"
+                  name="recipientName"
+                  value={shareFormData.recipientName}
+                  onChange={handleShareInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  name="recipientEmail"
+                  value={shareFormData.recipientEmail}
+                  onChange={handleShareInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Subject *
+                </label>
+                <input
+                  type="text"
+                  name="subject"
+                  value={shareFormData.subject}
+                  onChange={handleShareInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Message *
+                </label>
+                <textarea
+                  name="message"
+                  value={shareFormData.message}
+                  onChange={handleShareInputChange}
+                  rows={5}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Attached Links
+                </label>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <div className="flex items-center">
+                    <a
+                      href="https://hr-enquiry-form.vercel.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:text-indigo-800"
+                    >
+                      Enquiry Form Link
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowShareModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={`px-4 py-2 text-white bg-indigo-700 rounded-md hover:bg-indigo-800 flex items-center justify-center min-h-[42px] ${
+                    submitting ? "opacity-90 cursor-not-allowed" : ""
+                  }`}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <svg
+                        className="animate-spin h-4 w-4 text-white mr-2"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Email"
                   )}
                 </button>
               </div>

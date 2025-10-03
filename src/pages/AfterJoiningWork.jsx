@@ -18,22 +18,26 @@ const AfterJoiningWork = () => {
 const [formData, setFormData] = useState({
   checkSalarySlipResume: false,
   offerLetterReceived: false,
+  offerLetterImage: null,
+  offerLetterImageUrl: "",
   welcomeMeeting: false,
+  welcomeMeetingImage: null,
+  welcomeMeetingImageUrl: "",
   biometricAccess: false,
-  punchCode: "", // Add punch code field
+  punchCode: "",
   officialEmailId: false,
   emailId: "",
   emailPassword: "",
   assignAssets: false,
-  // Remove image upload fields and replace with input fields
   laptop: "",
   mobile: "",
   vehicle: "",
   other: "",
-  // Keep these for manual image upload
   manualImage: null,
   manualImageUrl: "",
   pfEsic: false,
+  pfEsicImage: null,
+  pfEsicImageUrl: "",
   companyDirectory: false,
   assets: [],
 });
@@ -176,17 +180,20 @@ const fetchAssetsData = async (employeeId) => {
     });
 
     if (matchingRow) {
-      return {
-        punchCode: matchingRow[10] || "", // Column K (index 10)
-        emailId: matchingRow[3] || "",
-        emailPassword: matchingRow[4] || "",
-        laptop: matchingRow[5] || "",
-        mobile: matchingRow[6] || "",
-        vehicle: matchingRow[7] || "",
-        other: matchingRow[8] || "",
-        manualImageUrl: matchingRow[9] || ""
-      };
-    }
+  return {
+    punchCode: matchingRow[10] || "",
+    emailId: matchingRow[3] || "",
+    emailPassword: matchingRow[4] || "",
+    laptop: matchingRow[5] || "",
+    mobile: matchingRow[6] || "",
+    vehicle: matchingRow[7] || "",
+    other: matchingRow[8] || "",
+    manualImageUrl: matchingRow[9] || "",
+    offerLetterImageUrl: matchingRow[11] || "", // Column L
+    welcomeMeetingImageUrl: matchingRow[12] || "", // Column M
+    pfEsicImageUrl: matchingRow[13] || "" // Column N
+  };
+}
 
     return null;
   } catch (error) {
@@ -362,18 +369,24 @@ const currentValues = {
 
       // Merge with assets data if available
   const finalFormData = {
-    ...currentValues,
-    punchCode: assetsData?.punchCode || "", // Add punch code
-    emailId: assetsData?.emailId || "",
-    emailPassword: assetsData?.emailPassword || "",
-    laptop: assetsData?.laptop || "",
-    mobile: assetsData?.mobile || "",
-    vehicle: assetsData?.vehicle || "",
-    other: assetsData?.other || "",
-    manualImageUrl: assetsData?.manualImageUrl || "",
-    manualImage: null,
-    assets: [],
-  };
+  ...currentValues,
+  punchCode: assetsData?.punchCode || "",
+  emailId: assetsData?.emailId || "",
+  emailPassword: assetsData?.emailPassword || "",
+  laptop: assetsData?.laptop || "",
+  mobile: assetsData?.mobile || "",
+  vehicle: assetsData?.vehicle || "",
+  other: assetsData?.other || "",
+  manualImageUrl: assetsData?.manualImageUrl || "",
+  offerLetterImageUrl: assetsData?.offerLetterImageUrl || "",
+  welcomeMeetingImageUrl: assetsData?.welcomeMeetingImageUrl || "",
+  pfEsicImageUrl: assetsData?.pfEsicImageUrl || "",
+  manualImage: null,
+  offerLetterImage: null,
+  welcomeMeetingImage: null,
+  pfEsicImage: null,
+  assets: [],
+};
 
   setFormData(prev => ({
     ...prev,
@@ -421,18 +434,21 @@ const saveAssetsData = async (employeeId, employeeName, assetsData) => {
     const timestamp = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     
     const rowData = [
-      timestamp,
-      employeeId,
-      employeeName,
-      assetsData.emailId || "",
-      assetsData.emailPassword || "",
-      assetsData.laptop || "", // Changed from image URL to text input
-      assetsData.mobile || "", // Changed from image URL to text input
-      assetsData.vehicle || "", // Changed from image URL to text input
-      assetsData.other || "", // Changed from image URL to text input
-      assetsData.manualImageUrl || "",
-      assetsData.punchCode || "" // Add punch code to column K
-    ];
+  timestamp,
+  employeeId,
+  employeeName,
+  assetsData.emailId || "",
+  assetsData.emailPassword || "",
+  assetsData.laptop || "",
+  assetsData.mobile || "",
+  assetsData.vehicle || "",
+  assetsData.other || "",
+  assetsData.manualImageUrl || "",
+  assetsData.punchCode || "",
+  assetsData.offerLetterImageUrl || "", // Column L
+  assetsData.welcomeMeetingImageUrl || "", // Column M
+  assetsData.pfEsicImageUrl || "" // Column N
+];
 
       // First, check if record exists
       const existingData = await fetchAssetsData(employeeId);
@@ -507,29 +523,70 @@ const handleSubmit = async (e) => {
 
   try {
     // Upload manual image if new file selected (only for company directory)
-    let manualImageUrl = formData.manualImageUrl;
-    if (formData.manualImage) {
-      try {
-        manualImageUrl = await uploadImageToDrive(
-          formData.manualImage,
-          `${selectedItem.joiningNo}_manual_${Date.now()}.${formData.manualImage.name.split('.').pop()}`
-        );
-      } catch (error) {
-        toast.error(`Failed to upload manual image: ${error.message}`);
-      }
-    }
+    // Upload images if new files selected
+let manualImageUrl = formData.manualImageUrl;
+let offerLetterImageUrl = formData.offerLetterImageUrl;
+let welcomeMeetingImageUrl = formData.welcomeMeetingImageUrl;
+let pfEsicImageUrl = formData.pfEsicImageUrl;
 
-    // Save assets data (now with text inputs instead of images)
-    await saveAssetsData(selectedItem.joiningNo, selectedItem.candidateName, {
-      emailId: formData.emailId,
-      emailPassword: formData.emailPassword,
-      laptop: formData.laptop,
-      mobile: formData.mobile,
-      vehicle: formData.vehicle,
-      other: formData.other,
-      manualImageUrl: manualImageUrl,
-      punchCode: formData.punchCode // Include punch code
-    });
+if (formData.manualImage) {
+  try {
+    manualImageUrl = await uploadImageToDrive(
+      formData.manualImage,
+      `${selectedItem.joiningNo}_manual_${Date.now()}.${formData.manualImage.name.split('.').pop()}`
+    );
+  } catch (error) {
+    toast.error(`Failed to upload manual image: ${error.message}`);
+  }
+}
+
+if (formData.offerLetterImage) {
+  try {
+    offerLetterImageUrl = await uploadImageToDrive(
+      formData.offerLetterImage,
+      `${selectedItem.joiningNo}_offerletter_${Date.now()}.${formData.offerLetterImage.name.split('.').pop()}`
+    );
+  } catch (error) {
+    toast.error(`Failed to upload offer letter image: ${error.message}`);
+  }
+}
+
+if (formData.welcomeMeetingImage) {
+  try {
+    welcomeMeetingImageUrl = await uploadImageToDrive(
+      formData.welcomeMeetingImage,
+      `${selectedItem.joiningNo}_welcomemeeting_${Date.now()}.${formData.welcomeMeetingImage.name.split('.').pop()}`
+    );
+  } catch (error) {
+    toast.error(`Failed to upload welcome meeting image: ${error.message}`);
+  }
+}
+
+if (formData.pfEsicImage) {
+  try {
+    pfEsicImageUrl = await uploadImageToDrive(
+      formData.pfEsicImage,
+      `${selectedItem.joiningNo}_pfesic_${Date.now()}.${formData.pfEsicImage.name.split('.').pop()}`
+    );
+  } catch (error) {
+    toast.error(`Failed to upload PF/ESIC image: ${error.message}`);
+  }
+}
+
+// Save assets data
+await saveAssetsData(selectedItem.joiningNo, selectedItem.candidateName, {
+  emailId: formData.emailId,
+  emailPassword: formData.emailPassword,
+  laptop: formData.laptop,
+  mobile: formData.mobile,
+  vehicle: formData.vehicle,
+  other: formData.other,
+  manualImageUrl: manualImageUrl,
+  punchCode: formData.punchCode,
+  offerLetterImageUrl: offerLetterImageUrl,
+  welcomeMeetingImageUrl: welcomeMeetingImageUrl,
+  pfEsicImageUrl: pfEsicImageUrl
+});
 
     // Continue with existing logic for updating JOINING sheet
     const fullDataResponse = await fetch(
@@ -964,7 +1021,7 @@ const formatDOB = (dateString) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Employee ID (कर्मचारी आईडी)
+                    Employee ID
                   </label>
                   <input
                     type="text"
@@ -975,7 +1032,7 @@ const formatDOB = (dateString) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Name (नाम)
+                    Name
                   </label>
                   <input
                     type="text"
@@ -988,36 +1045,239 @@ const formatDOB = (dateString) => {
 
               <div className="space-y-3">
                 <h4 className="text-md font-medium text-gray-500">
-                  Checklist Items (चेकलिस्ट आइटम)
+                  Checklist Items
                 </h4>
-                {[
-                  {
-                    key: "checkSalarySlipResume",
-                    label: "Check Salary Slip & Resume Copy (वेतन पर्ची और बायोडाटा कॉपी)",
-                  },
-                  {
-                    key: "offerLetterReceived",
-                    label: "Offer Letter Received (प्रस्ताव पत्र प्राप्त हुआ)",
-                  },
-                  { key: "welcomeMeeting", label: "Welcome Meeting (स्वागत बैठक)" },
-                  { key: "biometricAccess", label: "Biometric Access बॉयोमीट्रिक ऐक्सेस" },
-                ].map((item) => (
-                  <div key={item.key} className="flex items-center">
+
+                {/* Check Salary Slip & Resume */}
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="checkSalarySlipResume"
+                    checked={formData.checkSalarySlipResume}
+                    onChange={() =>
+                      handleCheckboxChange("checkSalarySlipResume")
+                    }
+                    className="h-4 w-4 text-gray-500 focus:ring-blue-500 border-gray-300 rounded bg-white"
+                  />
+                  <label
+                    htmlFor="checkSalarySlipResume"
+                    className="ml-2 text-sm text-gray-500"
+                  >
+                    Check Salary Slip & Resume Copy
+                  </label>
+                </div>
+
+                {/* Offer Letter Received with image upload */}
+                <div className="space-y-3">
+                  <div className="flex items-center">
                     <input
                       type="checkbox"
-                      id={item.key}
-                      checked={formData[item.key]}
-                      onChange={() => handleCheckboxChange(item.key)}
+                      id="offerLetterReceived"
+                      checked={formData.offerLetterReceived}
+                      onChange={() =>
+                        handleCheckboxChange("offerLetterReceived")
+                      }
                       className="h-4 w-4 text-gray-500 focus:ring-blue-500 border-gray-300 rounded bg-white"
                     />
                     <label
-                      htmlFor={item.key}
+                      htmlFor="offerLetterReceived"
                       className="ml-2 text-sm text-gray-500"
                     >
-                      {item.label}
+                      Offer Letter Received
                     </label>
                   </div>
-                ))}
+
+                  {formData.offerLetterReceived && (
+                    <div className="mt-2 ml-6 p-3 bg-gray-50 rounded-md">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-500">
+                          Offer Letter Document
+                        </label>
+                        <div className="space-y-2">
+                          <div className="flex items-center">
+                            <input
+                              type="file"
+                              id="offerLetterImage"
+                              accept="image/*"
+                              onChange={(e) =>
+                                handleImageUpload(e, "offerLetterImage")
+                              }
+                              className="hidden"
+                            />
+                            <label
+                              htmlFor="offerLetterImage"
+                              className="cursor-pointer bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 flex items-center"
+                            >
+                              <svg
+                                className="w-4 h-4 mr-1"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                ></path>
+                              </svg>
+                              {formData.offerLetterImage
+                                ? "Change Document"
+                                : formData.offerLetterImageUrl
+                                ? "Replace Document"
+                                : "Upload Document"}
+                            </label>
+                          </div>
+                          {formData.offerLetterImageUrl &&
+                            !formData.offerLetterImage && (
+                              <div className="mt-2">
+                                <img
+                                  src={formData.offerLetterImageUrl}
+                                  alt="Existing Offer Letter"
+                                  className="h-32 w-full object-contain rounded border"
+                                  onError={(e) => {
+                                    e.target.style.display = "none";
+                                  }}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Current offer letter document
+                                </p>
+                              </div>
+                            )}
+                          {formData.offerLetterImage && (
+                            <div className="mt-2">
+                              <img
+                                src={URL.createObjectURL(
+                                  formData.offerLetterImage
+                                )}
+                                alt="New Offer Letter"
+                                className="h-32 w-full object-contain rounded border"
+                              />
+                              <p className="text-xs text-green-600 mt-1">
+                                New document selected
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Welcome Meeting with image upload */}
+                <div className="space-y-3">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="welcomeMeeting"
+                      checked={formData.welcomeMeeting}
+                      onChange={() => handleCheckboxChange("welcomeMeeting")}
+                      className="h-4 w-4 text-gray-500 focus:ring-blue-500 border-gray-300 rounded bg-white"
+                    />
+                    <label
+                      htmlFor="welcomeMeeting"
+                      className="ml-2 text-sm text-gray-500"
+                    >
+                      Welcome Meeting
+                    </label>
+                  </div>
+
+                  {formData.welcomeMeeting && (
+                    <div className="mt-2 ml-6 p-3 bg-gray-50 rounded-md">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-500">
+                          Welcome Meeting Photo
+                        </label>
+                        <div className="space-y-2">
+                          <div className="flex items-center">
+                            <input
+                              type="file"
+                              id="welcomeMeetingImage"
+                              accept="image/*"
+                              onChange={(e) =>
+                                handleImageUpload(e, "welcomeMeetingImage")
+                              }
+                              className="hidden"
+                            />
+                            <label
+                              htmlFor="welcomeMeetingImage"
+                              className="cursor-pointer bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 flex items-center"
+                            >
+                              <svg
+                                className="w-4 h-4 mr-1"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                ></path>
+                              </svg>
+                              {formData.welcomeMeetingImage
+                                ? "Change Photo"
+                                : formData.welcomeMeetingImageUrl
+                                ? "Replace Photo"
+                                : "Upload Photo"}
+                            </label>
+                          </div>
+                          {formData.welcomeMeetingImageUrl &&
+                            !formData.welcomeMeetingImage && (
+                              <div className="mt-2">
+                                <img
+                                  src={formData.welcomeMeetingImageUrl}
+                                  alt="Existing Welcome Meeting"
+                                  className="h-32 w-full object-contain rounded border"
+                                  onError={(e) => {
+                                    e.target.style.display = "none";
+                                  }}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Current welcome meeting photo
+                                </p>
+                              </div>
+                            )}
+                          {formData.welcomeMeetingImage && (
+                            <div className="mt-2">
+                              <img
+                                src={URL.createObjectURL(
+                                  formData.welcomeMeetingImage
+                                )}
+                                alt="New Welcome Meeting"
+                                className="h-32 w-full object-contain rounded border"
+                              />
+                              <p className="text-xs text-green-600 mt-1">
+                                New photo selected
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Biometric Access */}
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="biometricAccess"
+                    checked={formData.biometricAccess}
+                    onChange={() => handleCheckboxChange("biometricAccess")}
+                    className="h-4 w-4 text-gray-500 focus:ring-blue-500 border-gray-300 rounded bg-white"
+                  />
+                  <label
+                    htmlFor="biometricAccess"
+                    className="ml-2 text-sm text-gray-500"
+                  >
+                    Biometric Access
+                  </label>
+                </div>
+
                 {formData.biometricAccess && (
                   <div className="mt-2 ml-6 p-3 bg-gray-50 rounded-md">
                     <div className="grid grid-cols-1 gap-3">
@@ -1051,7 +1311,7 @@ const formatDOB = (dateString) => {
                       htmlFor="officialEmailId"
                       className="ml-2 text-sm text-gray-500"
                     >
-                      Official Email ID (ऑफ़िशियल ईमेल आईडी)
+                      Official Email ID
                     </label>
                   </div>
 
@@ -1098,7 +1358,7 @@ const formatDOB = (dateString) => {
                     htmlFor="assignAssets"
                     className="ml-2 text-sm text-gray-500"
                   >
-                    Assign Assets (असाइन एसेट्स)
+                    Assign Assets
                   </label>
                 </div>
                 {formData.assignAssets && (
@@ -1125,20 +1385,97 @@ const formatDOB = (dateString) => {
                     ))}
                   </div>
                 )}
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="pfEsic"
-                    checked={formData.pfEsic}
-                    onChange={() => handleCheckboxChange("pfEsic")}
-                    className="h-4 w-4 text-gray-500 focus:ring-blue-500 border-gray-300 rounded bg-white"
-                  />
-                  <label
-                    htmlFor="pfEsic"
-                    className="ml-2 text-sm text-gray-500"
-                  >
-                    PF / ESIC (पी.एफ./ई.एस.आई.सी.)
-                  </label>
+                {/* PF / ESIC with image upload */}
+                <div className="space-y-3">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="pfEsic"
+                      checked={formData.pfEsic}
+                      onChange={() => handleCheckboxChange("pfEsic")}
+                      className="h-4 w-4 text-gray-500 focus:ring-blue-500 border-gray-300 rounded bg-white"
+                    />
+                    <label
+                      htmlFor="pfEsic"
+                      className="ml-2 text-sm text-gray-500"
+                    >
+                      PF / ESIC
+                    </label>
+                  </div>
+
+                  {formData.pfEsic && (
+                    <div className="mt-2 ml-6 p-3 bg-gray-50 rounded-md">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-500">
+                          PF / ESIC Document
+                        </label>
+                        <div className="space-y-2">
+                          <div className="flex items-center">
+                            <input
+                              type="file"
+                              id="pfEsicImage"
+                              accept="image/*"
+                              onChange={(e) =>
+                                handleImageUpload(e, "pfEsicImage")
+                              }
+                              className="hidden"
+                            />
+                            <label
+                              htmlFor="pfEsicImage"
+                              className="cursor-pointer bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 flex items-center"
+                            >
+                              <svg
+                                className="w-4 h-4 mr-1"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                ></path>
+                              </svg>
+                              {formData.pfEsicImage
+                                ? "Change Document"
+                                : formData.pfEsicImageUrl
+                                ? "Replace Document"
+                                : "Upload Document"}
+                            </label>
+                          </div>
+                          {formData.pfEsicImageUrl && !formData.pfEsicImage && (
+                            <div className="mt-2">
+                              <img
+                                src={formData.pfEsicImageUrl}
+                                alt="Existing PF/ESIC"
+                                className="h-32 w-full object-contain rounded border"
+                                onError={(e) => {
+                                  e.target.style.display = "none";
+                                }}
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Current PF/ESIC document
+                              </p>
+                            </div>
+                          )}
+                          {formData.pfEsicImage && (
+                            <div className="mt-2">
+                              <img
+                                src={URL.createObjectURL(formData.pfEsicImage)}
+                                alt="New PF/ESIC"
+                                className="h-32 w-full object-contain rounded border"
+                              />
+                              <p className="text-xs text-green-600 mt-1">
+                                New document selected
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {/* Company Directory Section */}
                 <div className="space-y-3">
@@ -1154,7 +1491,7 @@ const formatDOB = (dateString) => {
                       htmlFor="companyDirectory"
                       className="ml-2 text-sm text-gray-500"
                     >
-                      Company Directory (कंपनी निर्देशिका)
+                      Company Directory
                     </label>
                   </div>
 

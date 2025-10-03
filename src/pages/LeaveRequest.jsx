@@ -757,7 +757,7 @@ const calculateLeaveCounts = () => {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Employee Name (कर्मचारी का नाम) *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Employee Name*</label>
                 <input
                   type="text"
                   name="employeeName"
@@ -768,7 +768,7 @@ const calculateLeaveCounts = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID (कर्मचारी आईडी)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
                 <input
                   type="text"
                   name="employeeId"
@@ -779,7 +779,7 @@ const calculateLeaveCounts = () => {
               </div>
 
               <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Designation (पद का नाम)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
           <input
             type="text"
             name="designation"
@@ -790,7 +790,7 @@ const calculateLeaveCounts = () => {
         </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">HOD Name (एचओडी का नाम) *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">HOD Name*</label>
                 <select
                   name="hodName"
                   value={formData.hodName}

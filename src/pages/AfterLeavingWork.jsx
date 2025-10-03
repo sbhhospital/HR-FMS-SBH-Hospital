@@ -18,7 +18,8 @@ const AfterLeavingWork = () => {
     handoverAssetsIdVisitingCard: false,
     cancellationEmailBiometric: false,
     finalReleaseDate: '',
-    removeBenefitEnrollment: false
+    removeBenefitEnrollment: false,
+    noDues : false,
   });
 
   const fetchLeavingData = async () => {
@@ -98,7 +99,8 @@ const AfterLeavingWork = () => {
       handoverAssetsIdVisitingCard: false,
       cancellationEmailBiometric: false,
       finalReleaseDate: '',
-      removeBenefitEnrollment: false
+      removeBenefitEnrollment: false,
+      noDues : false
     });
     
     setSelectedItem(item);
@@ -175,7 +177,9 @@ const AfterLeavingWork = () => {
           allData[rowIndex][18]?.toString().trim().toLowerCase() === "yes",
         finalReleaseDate: formattedDate,
         removeBenefitEnrollment: 
-          allData[rowIndex][20]?.toString().trim().toLowerCase() === "yes"
+          allData[rowIndex][20]?.toString().trim().toLowerCase() === "yes",
+        noDues: 
+          allData[rowIndex][21]?.toString().trim().toLowerCase() === "yes"
       };
 
       setFormData(currentValues);
@@ -260,6 +264,7 @@ const handleSubmit = async (e) => {
       formData.handoverAssetsIdVisitingCard &&
       formData.cancellationEmailBiometric &&
       formData.removeBenefitEnrollment &&
+      formData.noDues &&
       formData.finalReleaseDate;
 
     const updatePromises = [];
@@ -314,7 +319,8 @@ const handleSubmit = async (e) => {
       { value: formData.resignationAcceptance ? "Yes" : "No", offset: 16 },
       { value: formData.handoverAssetsIdVisitingCard ? "Yes" : "No", offset: 17 },
       { value: formData.cancellationEmailBiometric ? "Yes" : "No", offset: 18 },
-      { value: formData.removeBenefitEnrollment ? "Yes" : "No", offset: 20 }
+      { value: formData.removeBenefitEnrollment ? "Yes" : "No", offset: 20 },
+      { value: formData.noDues ? "Yes" : "No", offset: 21 }
     ];
 
     // Add all other field updates
@@ -508,7 +514,7 @@ const handleSubmit = async (e) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name (नाम) </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                   <input
                     type="text"
                     value={selectedItem.name}
@@ -519,14 +525,15 @@ const handleSubmit = async (e) => {
               </div>
 
               <div className="space-y-3">
-                <h4 className="text-md font-medium text-gray-700">Checklist Items (चेकलिस्ट आइटम)</h4>
+                <h4 className="text-md font-medium text-gray-700">Checklist Items</h4>
                 
                 {[
-                  { key: 'resignationLetterReceived', label: 'Resignation Letter Received (त्याग पत्र प्राप्त हुआ)' },
-                  { key: 'resignationAcceptance', label: 'Resignation Acceptance (इस्तीफा स्वीकार)' },
-                  { key: 'handoverAssetsIdVisitingCard', label: 'Handover Of Assets, ID Card & Visiting Card (संपत्ति, आईडी कार्ड और विजिटिंग कार्ड सौंपना)' },
-                  { key: 'cancellationEmailBiometric', label: 'Cancellation Of Email ID & Biometric Access (ईमेल आईडी और बायोमेट्रिक एक्सेस रद्द करना)' },
-                  { key: 'removeBenefitEnrollment', label: 'Remove Benefit Enrollment (लाभ नामांकन हटाएँ)' }
+                  { key: 'resignationLetterReceived', label: 'Resignation Letter Received' },
+                  { key: 'resignationAcceptance', label: 'Resignation Acceptance' },
+                  { key: 'handoverAssetsIdVisitingCard', label: 'Handover Of Assets, ID Card & Visiting Card' },
+                  { key: 'cancellationEmailBiometric', label: 'Cancellation Of Email ID & Biometric Access' },
+                  { key: 'removeBenefitEnrollment', label: 'Remove Benefit Enrollment' },
+                  { key: 'noDues', label: 'No Dues' }
                 ].map((item) => (
                   <div key={item.key} className="flex items-center">
                     <input
@@ -544,7 +551,7 @@ const handleSubmit = async (e) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Final Release Date (अंतिम रिलीज की तारीख) </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Final Release Date</label>
                 <input
                   type="date"
                   name="finalReleaseDate"

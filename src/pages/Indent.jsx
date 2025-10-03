@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { HistoryIcon, Plus, X } from 'lucide-react';
 import useDataStore from '../store/dataStore';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 const Indent = () => {
+  const navigate = useNavigate();
   const { addIndent } = useDataStore();
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -23,6 +25,41 @@ const Indent = () => {
   const [loading, setLoading] = useState(false);
   const [tableLoading, setTableLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [departments, setDepartments] = useState([]);
+
+  const fetchDepartments = async () => {
+  try {
+    const response = await fetch(
+      'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=Master&action=fetch'
+    );
+    
+    const result = await response.json();
+    
+    if (result.success && result.data && result.data.length > 0) {
+      // Extract unique departments from Column B (index 1), skip header row
+      const deptList = result.data
+        .slice(1) // Skip header row
+        .map(row => row[1]) // Column B is index 1
+        .filter(dept => dept && dept.trim() !== '') // Remove empty values
+        .filter((dept, index, self) => self.indexOf(dept) === index); // Get unique values
+      
+      setDepartments(deptList);
+    }
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+  }
+};
+
+  const handleCreativeClick = (item) => {
+    // Navigate to JobPoster page with indent data
+    navigate('/jobPoster', { 
+      state: { 
+        post: item.post,
+        experience: item.experience,
+        indentNumber: item.indentNumber
+      }
+    });
+  };
 
   // Social site options
   const socialSiteOptions = [
@@ -42,6 +79,7 @@ const Indent = () => {
       } else {
         console.error('Error:', result.error);
       }
+      await fetchDepartments();
       setTableLoading(false);
     };
     loadData();
@@ -446,7 +484,7 @@ const fetchLastIndentNumber = async () => {
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Post (पद)*
+                  Post *
                 </label>
                 <input
                   type="text"
@@ -461,7 +499,7 @@ const fetchLastIndentNumber = async () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Gender (लिंग) *
+                  Gender *
                 </label>
                 <select
                   name="gender"
@@ -479,7 +517,7 @@ const fetchLastIndentNumber = async () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Department (विभाग)
+                  Department
                 </label>
                 <select
                   name="department"
@@ -488,16 +526,17 @@ const fetchLastIndentNumber = async () => {
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">Select Department</option>
-                  <option value="Production">Production</option>
-                  <option value="Management">Management</option>
-                  <option value="Sales">Sales</option>
-                  <option value="HR">HR</option>
+                  {departments.map((dept, index) => (
+                    <option key={index} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prefer (प्राथमिकता)
+                  Prefer
                 </label>
                 <select
                   name="prefer"
@@ -515,7 +554,7 @@ const fetchLastIndentNumber = async () => {
               {formData.prefer === "Experience" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Experience (अनुभव) *
+                    Experience *
                   </label>
                   <input
                     type="text"
@@ -531,7 +570,7 @@ const fetchLastIndentNumber = async () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Number Of Post (पद की संख्या) *
+                  Number Of Post *
                 </label>
                 <input
                   type="number"
@@ -547,7 +586,7 @@ const fetchLastIndentNumber = async () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Competition Date (समापन तिथि) *
+                  Competition Date *
                 </label>
                 <input
                   type="date"
@@ -560,7 +599,7 @@ const fetchLastIndentNumber = async () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Social Site (सोशल साइट) *
+                  Social Site *
                 </label>
                 <select
                   name="socialSite"
@@ -579,7 +618,7 @@ const fetchLastIndentNumber = async () => {
               {formData.socialSite === "Yes" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Social Site Types (सोशल साइट प्रकार) *
+                    Social Site Types *
                   </label>
                   <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-2">
                     {socialSiteOptions.map((option) => (
@@ -670,6 +709,9 @@ const fetchLastIndentNumber = async () => {
                     Indent Number
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Creative
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Post
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -721,6 +763,14 @@ const fetchLastIndentNumber = async () => {
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         {item.indentNumber}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => handleCreativeClick(item)}
+                          className="bg-blue-600 px-4 py-1 rounded-md text-white hover:bg-blue-700 transition-colors"
+                        >
+                          Creative
+                        </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {item.post}

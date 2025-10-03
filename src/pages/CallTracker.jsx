@@ -748,7 +748,7 @@ const handleSubmit = async (e) => {
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Candidate Enquiry No. ((उम्मीदवार इन्क्वायरी संख्या))
+                  Candidate Enquiry No.
                 </label>
                 <input
                   type="text"
@@ -759,7 +759,7 @@ const handleSubmit = async (e) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status (स्थिति) *
+                  Status*
                 </label>
                 <select
                   name="status"
@@ -768,13 +768,13 @@ const handleSubmit = async (e) => {
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
                   required
                 >
-                  <option value="">Select Status (स्थिति चुनें)</option>
+                  <option value="">Select Status</option>
                   <option value="Follow-up">Follow-up </option>
-                  <option value="Interview">Interview (साक्षात्कार) </option>
-                  <option value="Negotiation">Negotiation (बातचीत) </option>
-                  <option value="On Hold">On Hold (होल्ड पर) </option>
-                  <option value="Joining">Joining (भर्ती)</option>
-                  <option value="Reject">Reject (अस्वीकार)</option>
+                  <option value="Interview">Interview</option>
+                  <option value="Negotiation">Negotiation</option>
+                  <option value="On Hold">On Hold</option>
+                  <option value="Joining">Joining</option>
+                  <option value="Reject">Reject</option>
                 </select>
               </div>
 
@@ -807,10 +807,10 @@ const handleSubmit = async (e) => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {formData.status === "Interview"
-                        ? "Schedule Date (निर्धारित तिथि) *"
+                        ? "Schedule Date*"
                         : formData.status === "On Hold"
-                        ? "ReCalling Date (वापसी की तिथि) *"
-                        : "Next Date (अगली तारीख) *"}
+                        ? "ReCalling Date*"
+                        : "Next Date*"}
                     </label>
                     <input
                       type="date"

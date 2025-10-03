@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, Check, Clock, Calendar, Plus } from 'lucide-react';
+import { Search, X, Check, Clock, Calendar, Plus, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const LeaveManagement = () => {
@@ -15,6 +15,7 @@ const LeaveManagement = () => {
   const [actionInProgress, setActionInProgress] = useState(null);
   const [editableDates, setEditableDates] = useState({ from: '', to: '' });
   const [hodNames, setHodNames] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState('all');
   
   // New state for leave request modal
   const [showModal, setShowModal] = useState(false);
@@ -30,6 +31,45 @@ const LeaveManagement = () => {
     toDate: '',
     reason: ''
   });
+
+  // Calculate leave statistics for all employees or selected employee
+const calculateLeaveStats = () => {
+  const currentYear = new Date().getFullYear();
+  
+  // Filter leaves based on selected employee
+  const relevantLeaves = selectedEmployee === 'all' 
+    ? approvedLeaves 
+    : approvedLeaves.filter(leave => leave.employeeName === selectedEmployee);
+  
+  // Calculate approved leaves for current year
+  const casualLeaveTaken = relevantLeaves
+    .filter(leave => {
+      const leaveYear = new Date(leave.startDate.split('/').reverse().join('-')).getFullYear();
+      return leave.leaveType && leave.leaveType.toLowerCase().includes('casual') && leaveYear === currentYear;
+    })
+    .reduce((sum, leave) => sum + leave.days, 0);
+    
+  const earnedLeaveTaken = relevantLeaves
+    .filter(leave => {
+      const leaveYear = new Date(leave.startDate.split('/').reverse().join('-')).getFullYear();
+      return leave.leaveType && leave.leaveType.toLowerCase().includes('earned') && leaveYear === currentYear;
+    })
+    .reduce((sum, leave) => sum + leave.days, 0);
+  
+  const totalLeave = casualLeaveTaken + earnedLeaveTaken;
+  
+  return {
+    casualLeave: casualLeaveTaken,
+    earnedLeave: earnedLeaveTaken,
+    totalLeave: totalLeave,
+    remainingLeave: (12 + 24) - totalLeave // 12 Casual + 24 Earned per year
+  };
+};
+
+const leaveStats = calculateLeaveStats();
+
+// Get unique employee names for dropdown
+const uniqueEmployeeNames = ['all', ...new Set(approvedLeaves.map(leave => leave.employeeName))];
 
     const fetchHodNames = async () => {
     try {
@@ -455,10 +495,11 @@ const handleLeaveAction = async (action) => {
   });
 
   const filteredApprovedLeaves = approvedLeaves.filter(item => {
-    const matchesSearch = item.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.employeeId?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
+  const matchesSearch = item.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       item.employeeId?.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchesEmployee = selectedEmployee === 'all' || item.employeeName === selectedEmployee;
+  return matchesSearch && matchesEmployee;
+});
 
   const filteredRejectedLeaves = rejectedLeaves.filter(item => {
     const matchesSearch = item.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -599,6 +640,24 @@ const handleLeaveAction = async (action) => {
   );
 
   const renderApprovedLeavesTable = () => (
+    <>
+    {/* Employee Filter for Approved Leaves */}
+    <div className="mb-4 flex items-center gap-4">
+      <label htmlFor="employeeFilter" className="text-sm font-medium text-gray-700">
+        Filter by Employee:
+      </label>
+      <select
+        id="employeeFilter"
+        value={selectedEmployee}
+        onChange={(e) => setSelectedEmployee(e.target.value)}
+        className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      >
+        <option value="all">All Employees</option>
+        {uniqueEmployeeNames.filter(name => name !== 'all').map((name, index) => (
+          <option key={index} value={name}>{name}</option>
+        ))}
+      </select>
+    </div>
     <table className="min-w-full divide-y divide-white">
       <thead className="bg-gray-100">
         <tr>
@@ -639,6 +698,7 @@ const handleLeaveAction = async (action) => {
         )}
       </tbody>
     </table>
+    </>
   );
 
   const renderRejectedLeavesTable = () => (
@@ -701,7 +761,7 @@ const handleLeaveAction = async (action) => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Leave Management</h1>
-        <button 
+        <button
           onClick={() => setShowModal(true)}
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
         >
@@ -710,6 +770,7 @@ const handleLeaveAction = async (action) => {
         </button>
       </div>
 
+      {/* Search and Filter Section */}
       <div className="bg-white p-4 rounded-lg shadow flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
         <div className="flex flex-1 max-w-md">
           <div className="relative w-full">
@@ -720,7 +781,83 @@ const handleLeaveAction = async (action) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+            <Search
+              size={20}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Leave Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white rounded-xl shadow-lg border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 font-medium">Casual Leave</p>
+              <h3 className="text-2xl font-bold text-gray-800">
+                {leaveStats.casualLeave}
+              </h3>
+              <p className="text-xs text-gray-500">
+                Approved days (Current Year)
+              </p>
+            </div>
+            <div className="p-3 rounded-full bg-indigo-100">
+              <Calendar size={24} className="text-indigo-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 font-medium">Earned Leave</p>
+              <h3 className="text-2xl font-bold text-gray-800">
+                {leaveStats.earnedLeave}
+              </h3>
+              <p className="text-xs text-gray-500">
+                Approved days (Current Year)
+              </p>
+            </div>
+            <div className="p-3 rounded-full bg-indigo-100">
+              <Calendar size={24} className="text-indigo-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 font-medium">Total Leave</p>
+              <h3 className="text-2xl font-bold text-gray-800">
+                {leaveStats.totalLeave}
+              </h3>
+              <p className="text-xs text-gray-500">
+                All approved days (Current Year)
+              </p>
+            </div>
+            <div className="p-3 rounded-full bg-indigo-100">
+              <Calendar size={24} className="text-indigo-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 font-medium">
+                Remaining Leaves
+              </p>
+              <h3 className="text-2xl font-bold text-gray-800">
+                {leaveStats.remainingLeave}
+              </h3>
+              <p className="text-xs text-gray-500">
+                Available for Current Year
+              </p>
+            </div>
+            <div className="p-3 rounded-full bg-green-100">
+              <CheckCircle size={24} className="text-green-600" />
+            </div>
           </div>
         </div>
       </div>
@@ -729,31 +866,31 @@ const handleLeaveAction = async (action) => {
         <div className="border-b border-gray-200">
           <nav className="flex -mb-px">
             <button
-              onClick={() => setActiveTab('pending')}
+              onClick={() => setActiveTab("pending")}
               className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-                activeTab === 'pending' 
-                  ? 'border-indigo-500 text-indigo-600' 
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                activeTab === "pending"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
               Pending Leaves ({pendingLeaves.length})
             </button>
             <button
-              onClick={() => setActiveTab('approved')}
+              onClick={() => setActiveTab("approved")}
               className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-                activeTab === 'approved' 
-                  ? 'border-indigo-500 text-indigo-600' 
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                activeTab === "approved"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
               Approved Leaves ({approvedLeaves.length})
             </button>
             <button
-              onClick={() => setActiveTab('rejected')}
+              onClick={() => setActiveTab("rejected")}
               className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-                activeTab === 'rejected' 
-                  ? 'border-indigo-500 text-indigo-600' 
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                activeTab === "rejected"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
               Rejected Leaves ({rejectedLeaves.length})
@@ -768,14 +905,16 @@ const handleLeaveAction = async (action) => {
                 <div className="flex justify-center flex-col items-center">
                   <div className="w-6 h-6 border-4 border-indigo-500 border-dashed rounded-full animate-spin mb-2"></div>
                   <span className="text-gray-600 text-sm">
-                    {loading ? 'Processing request...' : 'Loading leave data...'}
+                    {loading
+                      ? "Processing request..."
+                      : "Loading leave data..."}
                   </span>
                 </div>
               </div>
             ) : error ? (
               <div className="px-6 py-12 text-center">
                 <p className="text-red-500">Error: {error}</p>
-                <button 
+                <button
                   onClick={fetchLeaveData}
                   className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
                 >
@@ -790,167 +929,208 @@ const handleLeaveAction = async (action) => {
       </div>
 
       {/* Modal for new leave request */}
-{showModal && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto scrollbar-hide">
-      <div className="flex justify-between items-center p-6 border-b sticky top-0 bg-white z-10">
-        <h3 className="text-lg font-medium">New Leave Request</h3>
-        <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700">
-          <X size={20} />
-        </button>
-      </div>
-      <form onSubmit={handleSubmit} className="p-6 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Employee Name (कर्मचारी का नाम) *</label>
-          <select
-            name="employeeName"
-            value={formData.employeeName}
-            onChange={handleInputChange}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          >
-            <option value="">Select Employee</option>
-            {employees.map(employee => (
-              <option key={employee.id} value={employee.name}>{employee.name}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID (कर्मचारी आईडी) </label>
-          <input
-            type="text"
-            name="employeeId"
-            value={formData.employeeId}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 focus:outline-none"
-            readOnly
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Designation (पद का नाम) </label>
-          <input
-            type="text"
-            name="designation"
-            value={formData.designation}
-            onChange={handleInputChange}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-
-        <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">HOD Name (एचओडी का नाम) *</label>
-            <select
-              name="hodName"
-              value={formData.hodName}
-              onChange={handleInputChange}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            >
-              <option value="">Select HOD </option>
-              {hodNames.map((name, index) => (
-                <option key={index} value={name}>{name}</option>
-              ))}
-            </select>
-          </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Leave Type (छुट्टी के प्रकार) *</label>
-          <select
-            name="leaveType"
-            value={formData.leaveType}
-            onChange={handleInputChange}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          >
-            <option value="">Select Leave Type</option>
-            {leaveTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">From Date (की तिथि से) *</label>
-            <input
-              type="date"
-              name="fromDate"
-              value={formData.fromDate}
-              onChange={handleInputChange}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">To Date (तारीख तक) *</label>
-            <input
-              type="date"
-              name="toDate"
-              value={formData.toDate}
-              onChange={handleInputChange}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-          </div>
-        </div>
-
-        {formData.fromDate && formData.toDate && (
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <p className="text-sm text-blue-800">
-              Total Days (कुल दिन) : <span className="font-semibold">{calculateDays(formData.fromDate, formData.toDate)}</span>
-            </p>
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Reason (कारण) *</label>
-          <textarea
-            name="reason"
-            value={formData.reason}
-            onChange={handleInputChange}
-            rows={3}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="Please provide reason for leave..."
-            required
-          />
-        </div>
-
-        <div className="flex justify-end space-x-2 pt-4">
-          <button
-            type="button"
-            onClick={() => setShowModal(false)}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className={`px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 min-h-[42px] flex items-center justify-center ${
-              submitting ? 'opacity-75 cursor-not-allowed' : ''
-            }`}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <div className="flex items-center">
-                <svg 
-                  className="animate-spin h-4 w-4 text-white mr-2" 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  fill="none" 
-                  viewBox="0 0 24 24"
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto scrollbar-hide">
+            <div className="flex justify-between items-center p-6 border-b sticky top-0 bg-white z-10">
+              <h3 className="text-lg font-medium">New Leave Request</h3>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Employee Name*
+                </label>
+                <select
+                  name="employeeName"
+                  value={formData.employeeName}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
                 >
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Submitting...</span>
+                  <option value="">Select Employee</option>
+                  {employees.map((employee) => (
+                    <option key={employee.id} value={employee.name}>
+                      {employee.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-            ) : 'Submit Request'}
-          </button>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Employee ID
+                </label>
+                <input
+                  type="text"
+                  name="employeeId"
+                  value={formData.employeeId}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 focus:outline-none"
+                  readOnly
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Designation
+                </label>
+                <input
+                  type="text"
+                  name="designation"
+                  value={formData.designation}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  HOD Name *
+                </label>
+                <select
+                  name="hodName"
+                  value={formData.hodName}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                >
+                  <option value="">Select HOD </option>
+                  {hodNames.map((name, index) => (
+                    <option key={index} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Leave Type*
+                </label>
+                <select
+                  name="leaveType"
+                  value={formData.leaveType}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                >
+                  <option value="">Select Leave Type</option>
+                  {leaveTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    From Date*
+                  </label>
+                  <input
+                    type="date"
+                    name="fromDate"
+                    value={formData.fromDate}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    To Date*
+                  </label>
+                  <input
+                    type="date"
+                    name="toDate"
+                    value={formData.toDate}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              {formData.fromDate && formData.toDate && (
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    Total Days :{" "}
+                    <span className="font-semibold">
+                      {calculateDays(formData.fromDate, formData.toDate)}
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Reason*
+                </label>
+                <textarea
+                  name="reason"
+                  value={formData.reason}
+                  onChange={handleInputChange}
+                  rows={3}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Please provide reason for leave..."
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={`px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 min-h-[42px] flex items-center justify-center ${
+                    submitting ? "opacity-75 cursor-not-allowed" : ""
+                  }`}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <div className="flex items-center">
+                      <svg
+                        className="animate-spin h-4 w-4 text-white mr-2"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      <span>Submitting...</span>
+                    </div>
+                  ) : (
+                    "Submit Request"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </form>
-    </div>
-  </div>
-)}
+      )}
     </div>
   );
 };

@@ -806,7 +806,7 @@ useEffect(() => {
         </div>
 
         {/* Gate Pass Card */}
-        <div className="bg-white rounded-xl shadow-lg border p-6">
+        {/* <div className="bg-white rounded-xl shadow-lg border p-6">
           <h3 className="text-lg font-bold text-gray-800 mb-6">
             Gate Pass History
           </h3>
@@ -864,7 +864,7 @@ useEffect(() => {
               No gate pass records found
             </p>
           )}
-        </div>
+        </div> */}
       </div>
     </div>
   );
