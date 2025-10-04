@@ -27,6 +27,7 @@ import LeaveManagement from './pages/LeaveManagement';
 import Joining from './pages/Joining';
 import License from './pages/License';
 import JobPoster from './pages/JobPoster';
+import LeaveApproval from './pages/LeaveApproval';
 // import GatePass from './pages/GatePass';
 // import GatePassRequest from './pages/GatePassRequest';
 
@@ -68,6 +69,7 @@ function App() {
               {/* <Route path="misreport" element={<MisReport />} /> */}
               <Route path="license" element={<License/>} />
               <Route path="jobPoster" element={<JobPoster/>} />
+              <Route path='leaveApproval' element={<LeaveApproval/>} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

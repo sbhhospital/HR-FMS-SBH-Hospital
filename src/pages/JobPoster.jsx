@@ -4,6 +4,7 @@ import html2canvas from "html2canvas";
 import bgImage1 from "../Assets/01.jpg";
 import bgImage2 from "../Assets/02.jpg";
 import bgImage3 from "../Assets/03.jpg";
+import bgImage4 from "../Assets/04.jpg";
 
 export default function JobPoster() {
   const location = useLocation();
@@ -38,28 +39,55 @@ export default function JobPoster() {
   };
 
   // Download Poster as Image
-  const downloadPoster = () => {
+const downloadPoster = () => {
     const posterElement = posterRef.current;
-    const scale = 3; // Increase scale for higher quality
+    const scale = 3;
 
-    html2canvas(posterElement, {
-      scale: scale,
-      useCORS: true,
-      letterRendering: true,
-      allowTaint: true,
-      backgroundColor: null,
-      width: posterElement.offsetWidth,
-      height: posterElement.offsetHeight,
-    }).then((canvas) => {
-      const link = document.createElement("a");
-      link.download = `${details.title.replace(/\s+/g, "_")}_Poster.png`;
-      link.href = canvas.toDataURL("image/png", 1.0); // max quality
-      link.click();
-    });
-  };
+    // Get the current background image URL
+    const currentBgImage = backgrounds[design - 1];
+
+    // 1. Load the original background image first to get its dimensions
+    const bgImage = new Image();
+    bgImage.crossOrigin = "anonymous";
+    bgImage.onload = () => {
+        // Temporarily hide the background image on the poster element
+        const originalBgStyle = posterElement.style.backgroundImage;
+        posterElement.style.backgroundImage = 'none';
+
+        html2canvas(posterElement, {
+            scale: scale,
+            useCORS: true,
+            backgroundColor: null,
+            width: posterElement.offsetWidth,
+            height: posterElement.offsetHeight,
+        }).then((textCanvas) => {
+            // Restore the background image on the original element
+            posterElement.style.backgroundImage = originalBgStyle;
+
+            // 2. Create the final high-resolution canvas
+            const finalCanvas = document.createElement("canvas");
+            finalCanvas.width = bgImage.naturalWidth;
+            finalCanvas.height = bgImage.naturalHeight;
+            const ctx = finalCanvas.getContext("2d");
+
+            // 3. Draw the original background image onto the final canvas
+            ctx.drawImage(bgImage, 0, 0);
+
+            // 4. Draw the text canvas on top, scaled to fit
+            ctx.drawImage(textCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+
+            // 5. Download the combined canvas
+            const link = document.createElement("a");
+            link.download = `${details.title.replace(/\s+/g, "_")}_Poster.png`;
+            link.href = finalCanvas.toDataURL("image/png", 1.0);
+            link.click();
+        });
+    };
+    bgImage.src = currentBgImage;
+};
 
   // Background images
-  const backgrounds = [bgImage1, bgImage2, bgImage3];
+  const backgrounds = [bgImage1, bgImage2, bgImage3, bgImage4];
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
@@ -187,6 +215,30 @@ export default function JobPoster() {
                 </div>
               </>
             )}
+
+            {/* Design 4 */}
+            {design === 4 && (
+              <>
+                <div className="text absolute left-5 top-[70px] text-red-600 font-bold text-4xl uppercase tracking-wide max-w-[50%] break-words leading-tight">
+                  {details.title}
+                </div>
+                <div className="text absolute left-36 top-[222px] text-gray-600 text-md">
+                  {details.qualification}
+                </div>
+                <div className="text absolute left-32 top-[245px] text-gray-600 text-md">
+                  {details.experience}
+                </div>
+                <div className="text absolute left-24 top-[267px] text-gray-600 text-md">
+                  {details.salary}
+                </div>
+                <div className="text absolute left-28 top-[289px] text-gray-600 text-md">
+                  {details.location}
+                </div>
+                <div className="text absolute left-10 top-[350px] text-red-600 font-bold text-2xl tracking-wide max-w-[50%] break-words leading-tight">
+                  {details.note}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Buttons just below the poster */}
@@ -198,7 +250,7 @@ export default function JobPoster() {
               Download Creative
             </button>
             <button
-              onClick={() => setDesign(design === 3 ? 1 : design + 1)}
+              onClick={() => setDesign(design === 4 ? 1 : design + 1)}
               className="bg-blue-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:bg-blue-500"
             >
               Change Design

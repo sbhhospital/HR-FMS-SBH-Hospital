@@ -19,15 +19,58 @@ const LeaveRequest = () => {
   const [employees, setEmployees] = useState([]);
   const [hodNames, setHodNames] = useState([]);
   const [formData, setFormData] = useState({
-  employeeId: employeeId,
-  employeeName: user.Name || '',
-  designation: '',
-  hodName: '',
-  leaveType: '',
-  fromDate: '',
-  toDate: '',
-  reason: ''
-});
+    employeeId: employeeId,
+    employeeName: user.Name || '',
+    department: '', // Changed from designation to department
+    hodName: '', // Will be auto-filled
+    substitute: '', // New field for substitute
+    leaveType: '',
+    fromDate: '',
+    toDate: '',
+    reason: ''
+  });
+
+   const fetchHodNameByDepartment = async (department) => {
+    if (!department) return "";
+    
+    try {
+      const response = await fetch(
+        "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=USER&action=fetch"
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to fetch USER data");
+      }
+
+      const rawData = result.data || result;
+
+      if (!Array.isArray(rawData)) {
+        throw new Error("Expected array data not received");
+      }
+
+      // USER sheet structure:
+      // Column F (index 5) - Department
+      // Column G (index 6) - HOD Status (Yes/No)
+      // Column A (index 0) - Name
+      const hodData = rawData
+        .slice(1) // Skip header row
+        .find(row => 
+          row[5]?.toString().trim().toLowerCase() === department.toLowerCase() && 
+          row[6]?.toString().trim().toLowerCase() === "yes"
+        );
+
+      return hodData ? hodData[2]?.toString().trim() : ""; // Return name from Column A
+    } catch (error) {
+      console.error("Error fetching HOD data:", error);
+      return "";
+    }
+  };
 
   const fetchHodNames = async () => {
     try {
@@ -87,20 +130,29 @@ const LeaveRequest = () => {
       // Data starts from row 7 (index 6)
       // Column C (index 2) contains Employee Name
       // Column B (index 1) contains Employee ID
-      // Column F (index 5) contains Designation
+      // Column U (index 20) contains Department (changed from designation)
       const employeeRow = rawData.slice(6).find(row => 
         row[2]?.toString().trim().toLowerCase() === user.Name?.toString().trim().toLowerCase()
       );
       
       if (employeeRow) {
         const employeeId = employeeRow[1] || '';
-        const designation = employeeRow[5] || '';
+        const department = employeeRow[20] || ''; // Column U for department
         
         setFormData(prev => ({
           ...prev,
           employeeId: employeeId,
-          designation: designation
+          department: department
         }));
+
+        // Auto-fetch HOD name based on department
+        if (department) {
+          const hodName = await fetchHodNameByDepartment(department);
+          setFormData(prev => ({
+            ...prev,
+            hodName: hodName
+          }));
+        }
       }
     } catch (error) {
       console.error('Error fetching employee data:', error);
@@ -108,7 +160,7 @@ const LeaveRequest = () => {
   };
 
   // Fetch employees from JOINING sheet
-  const fetchEmployees = async () => {
+ const fetchEmployees = async () => {
     try {
       const response = await fetch(
         'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=JOINING&action=fetch'
@@ -133,11 +185,11 @@ const LeaveRequest = () => {
       // Data starts from row 7 (index 6)
       // Column C is index 2 (Employee Name)
       // Column B is index 1 (Employee ID)
-      // Column F is index 5 (Designation)
+      // Column U is index 20 (Department) - changed from designation
       const employeeData = rawData.slice(6).map((row, index) => ({
         id: row[1] || '', // Column B (Employee ID)
         name: row[2] || '', // Column C (Employee Name)
-        designation: row[5] || '', // Column F (Designation)
+        department: row[20] || '', // Column U (Department)
         rowIndex: index + 7 // Actual row number in sheet
       })).filter(emp => emp.name && emp.id); // Filter out empty entries
 
@@ -149,12 +201,12 @@ const LeaveRequest = () => {
   };
 
   const handleInputChange = (e) => {
-  const { name, value } = e.target;
-  setFormData(prev => ({
-    ...prev,
-    [name]: value
-  }));
-};
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   const handleMonthChange = (e) => {
     setSelectedMonth(e.target.value);
@@ -355,85 +407,94 @@ const fetchLeaveData = async () => {
   }, []);
 
 const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!formData.employeeName || !formData.leaveType || !formData.fromDate || !formData.toDate || !formData.reason || !formData.hodName) {
-    toast.error('Please fill all required fields');
-    return;
-  }
-
-  try {
-    setSubmitting(true);
-
-   const now = new Date();
-
-// Format timestamp as DD/MM/YYYY HH:MM:SS
-const day = String(now.getDate()).padStart(2, '0');
-const month = String(now.getMonth() + 1).padStart(2, '0');
-const year = now.getFullYear();
-const hours = String(now.getHours()).padStart(2, '0');
-const minutes = String(now.getMinutes()).padStart(2, '0');
-const seconds = String(now.getSeconds()).padStart(2, '0');
-const formattedTimestamp = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-
-    const rowData = [
-      formattedTimestamp,           // Timestamp
-      "",                          // Serial number (empty for auto-increment)
-      formData.employeeId,         // Employee ID
-      formData.employeeName,       // Employee Name
-      formatDOB(formData.fromDate), // Leave Date Start (formatted to dd/mm/yyyy)
-      formatDOB(formData.toDate),   // Leave Date End (formatted to dd/mm/yyyy)
-      formData.reason,             // Reason
-      "Pending",                   // Status
-      formData.leaveType,          // Leave Type (Column L, index 11)
-      formData.hodName,            // HOD Name
-      formData.designation,        // Designation
-    ];
-
-    const response = await fetch('https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec', {
-      method: 'POST',
-      body: new URLSearchParams({
-        sheetName: 'Leave Management',
-        action: 'insert',
-        rowData: JSON.stringify(rowData),
-      }),
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-  toast.success('Leave Request submitted successfully!');
-  
-  // Refresh the data immediately to update the button state
-  await fetchLeaveData();
-  
-  setFormData({
-    employeeId: employeeId,
-    employeeName: user.Name || '',
-    designation: formData.designation || '',
-    hodName: '',
-    leaveType: '',
-    fromDate: '',
-    toDate: '',
-    reason: ''
-  });
-  setShowModal(false);
-      // Refresh the data
-      fetchLeaveData();
-    } else {
-      toast.error('Failed to insert: ' + (result.error || 'Unknown error'));
+    if (
+      !formData.employeeName ||
+      !formData.leaveType ||
+      !formData.fromDate ||
+      !formData.toDate ||
+      !formData.reason ||
+      !formData.hodName ||
+      !formData.substitute // Added substitute as required field
+    ) {
+      toast.error("Please fill all required fields");
+      return;
     }
-  } catch (error) {
-    console.error('Insert error:', error);
-    toast.error('Something went wrong!');
-  } finally {
-    setSubmitting(false);
-  }
-};
+
+    try {
+      setSubmitting(true);
+      const now = new Date();
+
+      // Format timestamp as DD/MM/YYYY HH:MM:SS
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      const formattedTimestamp = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+
+      const rowData = [
+        formattedTimestamp,           // Timestamp
+        "",                          // Serial number (empty for auto-increment)
+        formData.employeeId,         // Employee ID
+        formData.employeeName,       // Employee Name
+        formatDOB(formData.fromDate), // Leave Date Start (formatted to dd/mm/yyyy)
+        formatDOB(formData.toDate),   // Leave Date End (formatted to dd/mm/yyyy)
+        formData.reason,             // Reason
+        "Pending",                   // Status
+        formData.leaveType,          // Leave Type
+        formData.hodName,            // HOD Name
+        formData.department,         // Department (changed from designation)
+        formData.substitute,         // Substitute (new field)
+        "Pending",                   // Column M (index 12) - Add Pending status here
+      ];
+
+      const response = await fetch('https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec', {
+        method: 'POST',
+        body: new URLSearchParams({
+          sheetName: 'Leave Management',
+          action: 'insert',
+          rowData: JSON.stringify(rowData),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success('Leave Request submitted successfully!');
+        
+        // Refresh the data immediately to update the button state
+        await fetchLeaveData();
+        
+        setFormData({
+          employeeId: employeeId,
+          employeeName: user.Name || '',
+          department: formData.department || '',
+          hodName: '',
+          substitute: '',
+          leaveType: '',
+          fromDate: '',
+          toDate: '',
+          reason: ''
+        });
+        setShowModal(false);
+      } else {
+        toast.error('Failed to insert: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Insert error:', error);
+      toast.error('Something went wrong!');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
 
 const hasSubmittedToday = () => {
   const today = new Date();
-  const todayStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+  const todayStr = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
   
   return leavesData.some(leave => {
     // Case-insensitive employee name comparison
@@ -448,8 +509,10 @@ const hasSubmittedToday = () => {
   });
 };
   const leaveTypes = [
-    'Casual Leave',
-    'Earned Leave',
+    "Casual Leave",
+    "Earned Leave", 
+    "Sick Leave",
+    "Restricted Holiday",
   ];
 
   // Generate year options (current year and previous 5 years)
@@ -467,54 +530,87 @@ const hasSubmittedToday = () => {
   const yearOptions = getYearOptions();
 
   // Calculate leave counts based on selected month and year
-const calculateLeaveCounts = () => {
-  // Filter for approved leaves for this specific employee
-  const approvedLeaves = leavesData.filter(leave => 
-    leave.status && leave.status.toLowerCase() === 'approved' && 
-    leave.employeeName === user.Name
-  );
-  
-  return {
-    'Casual Leave': approvedLeaves
-      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase().includes('casual'))
-      .reduce((sum, leave) => sum + calculateDaysInMonth(leave.startDate, leave.endDate, selectedMonth, parseInt(selectedYear)), 0),
-    'Earned Leave': approvedLeaves
-      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase().includes('earned'))
-      .reduce((sum, leave) => sum + calculateDaysInMonth(leave.startDate, leave.endDate, selectedMonth, parseInt(selectedYear)), 0),
-  };
-};
-
-  // Calculate remaining leaves for the year
-  const calculateRemainingLeaves = () => {
+ const calculateLeaveStats = () => {
     const currentYear = new Date().getFullYear();
-    
-    // Filter for approved leaves for this specific employee in the current year
-    const approvedLeaves = leavesData.filter(leave => 
+
+    // Filter approved leaves for current employee in selected period
+    const relevantLeaves = leavesData.filter(leave => 
       leave.status && leave.status.toLowerCase() === 'approved' && 
       leave.employeeName === user.Name
     );
-    
-    // Calculate total days taken for each leave type in the current year
-    const casualLeaveTaken = approvedLeaves
-      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase().includes('casual'))
-      .reduce((sum, leave) => {
-        const leaveYear = new Date(parseDate(leave.startDate) || new Date()).getFullYear();
-        return leaveYear === currentYear ? sum + calculateDays(leave.startDate, leave.endDate) : sum;
-      }, 0);
-      
-    const earnedLeaveTaken = approvedLeaves
-      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase().includes('earned'))
-      .reduce((sum, leave) => {
-        const leaveYear = new Date(parseDate(leave.startDate) || new Date()).getFullYear();
-        return leaveYear === currentYear ? sum + calculateDays(leave.startDate, leave.endDate) : sum;
-      }, 0);
-    
-    // Company policy: 12 Casual Leave and 15 Earned Leave per year
+
+    // Calculate approved leaves for current year
+    const casualLeaveTaken = relevantLeaves
+      .filter((leave) => {
+        const leaveYear = new Date(
+          leave.startDate.split("/").reverse().join("-")
+        ).getFullYear();
+        return (
+          leave.leaveType &&
+          leave.leaveType.toLowerCase().includes("casual") &&
+          leaveYear === currentYear
+        );
+      })
+      .reduce((sum, leave) => sum + leave.days, 0);
+
+    const earnedLeaveTaken = relevantLeaves
+      .filter((leave) => {
+        const leaveYear = new Date(
+          leave.startDate.split("/").reverse().join("-")
+        ).getFullYear();
+        return (
+          leave.leaveType &&
+          leave.leaveType.toLowerCase().includes("earned") &&
+          leaveYear === currentYear
+        );
+      })
+      .reduce((sum, leave) => sum + leave.days, 0);
+
+    const sickLeaveTaken = relevantLeaves
+      .filter((leave) => {
+        const leaveYear = new Date(
+          leave.startDate.split("/").reverse().join("-")
+        ).getFullYear();
+        return (
+          leave.leaveType &&
+          leave.leaveType.toLowerCase().includes("sick") &&
+          leaveYear === currentYear
+        );
+      })
+      .reduce((sum, leave) => sum + leave.days, 0);
+
+    const restrictedHolidayTaken = relevantLeaves
+      .filter((leave) => {
+        const leaveYear = new Date(
+          leave.startDate.split("/").reverse().join("-")
+        ).getFullYear();
+        return (
+          leave.leaveType &&
+          leave.leaveType.toLowerCase().includes("restricted") &&
+          leaveYear === currentYear
+        );
+      })
+      .reduce((sum, leave) => sum + leave.days, 0);
+
+    const totalLeave =
+      casualLeaveTaken +
+      earnedLeaveTaken +
+      sickLeaveTaken +
+      restrictedHolidayTaken;
+
     return {
-      'Casual Leave': 12 - casualLeaveTaken,
-      'Earned Leave': 24 - earnedLeaveTaken,
+      casualLeave: casualLeaveTaken,
+      earnedLeave: earnedLeaveTaken,
+      sickLeave: sickLeaveTaken,
+      restrictedHoliday: restrictedHolidayTaken,
+      totalLeave: totalLeave,
     };
   };
+
+  const leaveStats = calculateLeaveStats();
+
+
+
 
   // ✅ Approved leave counts (only number of requests)
   const calculateApprovedLeaveCounts = () => {
@@ -557,28 +653,26 @@ const calculateLeaveCounts = () => {
     { value: '11', label: 'December' }
   ];
 
-  const remainingLeaves = calculateRemainingLeaves();
-
-  return (
+return (
     <div className="space-y-6 page-content p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Leave Request</h1>
         <button 
-  onClick={() => setShowModal(true)}
-  disabled={hasSubmittedToday()}
-  className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-    hasSubmittedToday() 
-      ? 'bg-gray-400 cursor-not-allowed' 
-      : 'bg-indigo-600 hover:bg-indigo-700'
-  }`}
-  title={hasSubmittedToday() ? "You have already submitted a leave request today. Please try again tomorrow." : ""}
->
-  <Plus size={16} className="mr-2" />
-  New Leave Request
-  {hasSubmittedToday() && (
-    <span className="ml-2 text-xs">(Disabled for today)</span>
-  )}
-</button>
+          onClick={() => setShowModal(true)}
+          disabled={hasSubmittedToday()}
+          className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+            hasSubmittedToday() 
+              ? 'bg-gray-400 cursor-not-allowed' 
+              : 'bg-indigo-600 hover:bg-indigo-700'
+          }`}
+          title={hasSubmittedToday() ? "You have already submitted a leave request today. Please try again tomorrow." : ""}
+        >
+          <Plus size={16} className="mr-2" />
+          New Leave Request
+          {hasSubmittedToday() && (
+            <span className="ml-2 text-xs">(Disabled for today)</span>
+          )}
+        </button>
       </div>
 
       {/* Month and Year Filter */}
@@ -623,63 +717,86 @@ const calculateLeaveCounts = () => {
         </div>
       </div>
 
-      {/* Leave Balance Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {Object.entries(calculateLeaveCounts()).map(([leaveType, days]) => (
-          <div key={leaveType} className="bg-white rounded-xl shadow-lg border p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 font-medium">{leaveType}</p>
-                <h3 className="text-2xl font-bold text-gray-800">{days}</h3>
-                <p className="text-xs text-gray-500">
-                  {selectedMonth === 'all' ? 'Total approved days' : `Days in ${monthOptions.find(m => m.value === selectedMonth)?.label || ''}`}
-                </p>
-              </div>
-              <div className="p-3 rounded-full bg-indigo-100">
-                <Calendar size={24} className="text-indigo-600" />
-              </div>
-            </div>
-          </div>
-        ))}
-        
-        {/* Total Leave Card */}
+      {/* Updated Leave Statistics Cards to match Leave Management */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <div className="bg-white rounded-xl shadow-lg border p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 font-medium">Total Leave</p>
+              <p className="text-sm text-gray-600 font-bold">Casual Leave</p>
               <h3 className="text-2xl font-bold text-gray-800">
-                {Object.values(calculateLeaveCounts()).reduce((sum, days) => sum + days, 0)}
+                {leaveStats.casualLeave}
               </h3>
               <p className="text-xs text-gray-500">
-                {selectedMonth === 'all' ? 'All approved days' : `Total days in ${monthOptions.find(m => m.value === selectedMonth)?.label || ''}`}
+                Total Leave : <b>6</b> | Remaining :{" "}
+                <b> {6 - leaveStats.casualLeave}</b>
               </p>
-            </div>
-            <div className="p-3 rounded-full bg-indigo-100">
-              <Calendar size={24} className="text-indigo-600" />
             </div>
           </div>
         </div>
-        
-        {/* Remaining Leaves Card */}
+
         <div className="bg-white rounded-xl shadow-lg border p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 font-medium">Remaining Leaves</p>
+              <p className="text-sm text-gray-600 font-bold">Earned Leave</p>
               <h3 className="text-2xl font-bold text-gray-800">
-                {remainingLeaves['Casual Leave'] + remainingLeaves['Earned Leave']}
+                {leaveStats.earnedLeave}
               </h3>
               <p className="text-xs text-gray-500">
-                Casual: {remainingLeaves['Casual Leave']} | Earned: {remainingLeaves['Earned Leave']}
+                Total Leave : <b>12</b> | Remaining :{" "}
+                <b> {12 - leaveStats.earnedLeave}</b>
               </p>
             </div>
-            <div className="p-3 rounded-full bg-green-100">
-              <CheckCircle size={24} className="text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 font-bold">Sick Leave</p>
+              <h3 className="text-2xl font-bold text-gray-800">
+                {leaveStats.sickLeave}
+              </h3>
+              <p className="text-xs text-gray-500">
+                Total Leave : <b>6</b> | Remaining :{" "}
+                <b> {6 - leaveStats.sickLeave}</b>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 font-bold">
+                Restricted Holiday
+              </p>
+              <h3 className="text-2xl font-bold text-gray-800">
+                {leaveStats.restrictedHoliday}
+              </h3>
+              <p className="text-xs text-gray-500">
+                Total Leave : <b>2</b> | Remaining :{" "}
+                <b> {2 - leaveStats.restrictedHoliday}</b>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 font-bold">Total Leave</p>
+              <h3 className="text-2xl font-bold text-gray-800">
+                {leaveStats.totalLeave}
+              </h3>
+              <p className="text-xs text-gray-500">
+                All approved days (Current Year)
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Leave Requests Table */}
+      {/* Leave Requests Table - remains unchanged */}
       <div className="bg-white rounded-lg shadow border overflow-hidden">
         <div className="p-6">
           <h2 className="text-lg font-bold text-gray-800 mb-4">My Leave Requests</h2>
@@ -713,8 +830,8 @@ const calculateLeaveCounts = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.leaveType}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDOB(request.startDate)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-  {formatDOB(request.endDate)}
-</td>
+                        {formatDOB(request.endDate)}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.days}</td>
                       <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{request.reason}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -745,7 +862,7 @@ const calculateLeaveCounts = () => {
         </div>
       </div>
 
-      {/* Modal for new leave request - Updated to match LeaveManagement */}
+      {/* Modal for new leave request - remains unchanged from previous update */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto scrollbar-hide">
@@ -756,17 +873,7 @@ const calculateLeaveCounts = () => {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Employee Name*</label>
-                <input
-                  type="text"
-                  name="employeeName"
-                  value={formData.employeeName}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 focus:outline-none"
-                  readOnly
-                />
-              </div>
-
+              {/* Employee ID */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
                 <input
@@ -778,35 +885,66 @@ const calculateLeaveCounts = () => {
                 />
               </div>
 
+              {/* Employee Name */}
               <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
-          <input
-            type="text"
-            name="designation"
-            value={formData.designation}
-            onChange={handleInputChange}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Employee Name*</label>
+                <input
+                  type="text"
+                  name="employeeName"
+                  value={formData.employeeName}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 focus:outline-none"
+                  readOnly
+                />
+              </div>
 
+              {/* Department field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                <input
+                  type="text"
+                  name="department"
+                  value={formData.department}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 focus:outline-none"
+                  readOnly
+                />
+              </div>
+
+              {/* HOD Name (auto-filled) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">HOD Name*</label>
-                <select
+                <input
+                  type="text"
                   name="hodName"
                   value={formData.hodName}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 focus:outline-none"
+                  readOnly
+                />
+              </div>
+
+              {/* Substitute dropdown */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Substitute *</label>
+                <select
+                  name="substitute"
+                  value={formData.substitute}
                   onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   required
                 >
-                  <option value="">Select HOD</option>
-                  {hodNames.map((name, index) => (
-                    <option key={index} value={name}>{name}</option>
-                  ))}
+                  <option value="">Select Substitute</option>
+                  {employees
+                    .filter(emp => emp.department === formData.department && emp.name !== formData.employeeName)
+                    .map((employee) => (
+                      <option key={employee.id} value={employee.name}>
+                        {employee.name}
+                      </option>
+                    ))}
                 </select>
               </div>
 
+              {/* Leave Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Leave Type *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Leave Type*</label>
                 <select
                   name="leaveType"
                   value={formData.leaveType}
@@ -815,12 +953,15 @@ const calculateLeaveCounts = () => {
                   required
                 >
                   <option value="">Select Leave Type</option>
-                  {leaveTypes.map(type => (
-                    <option key={type} value={type}>{type}</option>
+                  {leaveTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
                   ))}
                 </select>
               </div>
 
+              {/* Date fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">From Date *</label>
