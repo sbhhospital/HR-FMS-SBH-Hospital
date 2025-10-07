@@ -34,86 +34,99 @@ const LeaveManagement = () => {
 });
 
   // Replace the calculateLeaveStats function with this updated version
-  const calculateLeaveStats = () => {
-    const currentYear = new Date().getFullYear();
+const calculateLeaveStats = () => {
+  const currentYear = new Date().getFullYear();
 
-    // Filter leaves based on selected employee
-    const relevantLeaves =
-      selectedEmployee === "all"
-        ? approvedLeaves
-        : approvedLeaves.filter(
-            (leave) => leave.employeeName === selectedEmployee
-          );
-
-    // Calculate approved leaves for current year
-    const casualLeaveTaken = relevantLeaves
-      .filter((leave) => {
-        const leaveYear = new Date(
-          leave.startDate.split("/").reverse().join("-")
-        ).getFullYear();
-        return (
-          leave.leaveType &&
-          leave.leaveType.toLowerCase().includes("casual") &&
-          leaveYear === currentYear
+  // Filter leaves based on selected employee
+  const relevantLeaves =
+    selectedEmployee === "all"
+      ? approvedLeaves
+      : approvedLeaves.filter(
+          (leave) => leave.employeeName === selectedEmployee
         );
-      })
-      .reduce((sum, leave) => sum + leave.days, 0);
 
-    const earnedLeaveTaken = relevantLeaves
-      .filter((leave) => {
-        const leaveYear = new Date(
-          leave.startDate.split("/").reverse().join("-")
-        ).getFullYear();
-        return (
-          leave.leaveType &&
-          leave.leaveType.toLowerCase().includes("earned") &&
-          leaveYear === currentYear
-        );
-      })
-      .reduce((sum, leave) => sum + leave.days, 0);
+  // Calculate approved leaves for current year using days from Column N (index 13)
+  const casualLeaveTaken = relevantLeaves
+    .filter((leave) => {
+      const leaveYear = new Date(
+        leave.startDate.split("/").reverse().join("-")
+      ).getFullYear();
+      return (
+        leave.leaveType &&
+        leave.leaveType.toLowerCase().includes("casual") &&
+        leaveYear === currentYear
+      );
+    })
+    .reduce((sum, leave) => {
+      // Use days from Column N (index 13), fallback to 0 if not available
+      const days = leave.days ? parseInt(leave.days) : 0;
+      return sum + (isNaN(days) ? 0 : days);
+    }, 0);
 
-    const sickLeaveTaken = relevantLeaves
-      .filter((leave) => {
-        const leaveYear = new Date(
-          leave.startDate.split("/").reverse().join("-")
-        ).getFullYear();
-        return (
-          leave.leaveType &&
-          leave.leaveType.toLowerCase().includes("sick") &&
-          leaveYear === currentYear
-        );
-      })
-      .reduce((sum, leave) => sum + leave.days, 0);
+  const earnedLeaveTaken = relevantLeaves
+    .filter((leave) => {
+      const leaveYear = new Date(
+        leave.startDate.split("/").reverse().join("-")
+      ).getFullYear();
+      return (
+        leave.leaveType &&
+        leave.leaveType.toLowerCase().includes("earned") &&
+        leaveYear === currentYear
+      );
+    })
+    .reduce((sum, leave) => {
+      const days = leave.days ? parseInt(leave.days) : 0;
+      return sum + (isNaN(days) ? 0 : days);
+    }, 0);
 
-    const restrictedHolidayTaken = relevantLeaves
-      .filter((leave) => {
-        const leaveYear = new Date(
-          leave.startDate.split("/").reverse().join("-")
-        ).getFullYear();
-        return (
-          leave.leaveType &&
-          leave.leaveType.toLowerCase().includes("restricted") &&
-          leaveYear === currentYear
-        );
-      })
-      .reduce((sum, leave) => sum + leave.days, 0);
+  const sickLeaveTaken = relevantLeaves
+    .filter((leave) => {
+      const leaveYear = new Date(
+        leave.startDate.split("/").reverse().join("-")
+      ).getFullYear();
+      return (
+        leave.leaveType &&
+        leave.leaveType.toLowerCase().includes("sick") &&
+        leaveYear === currentYear
+      );
+    })
+    .reduce((sum, leave) => {
+      const days = leave.days ? parseInt(leave.days) : 0;
+      return sum + (isNaN(days) ? 0 : days);
+    }, 0);
 
-    const totalLeave =
-      casualLeaveTaken +
-      earnedLeaveTaken +
-      sickLeaveTaken +
-      restrictedHolidayTaken;
+  const restrictedHolidayTaken = relevantLeaves
+    .filter((leave) => {
+      const leaveYear = new Date(
+        leave.startDate.split("/").reverse().join("-")
+      ).getFullYear();
+      return (
+        leave.leaveType &&
+        leave.leaveType.toLowerCase().includes("restricted") &&
+        leaveYear === currentYear
+      );
+    })
+    .reduce((sum, leave) => {
+      const days = leave.days ? parseInt(leave.days) : 0;
+      return sum + (isNaN(days) ? 0 : days);
+    }, 0);
 
-    return {
-      casualLeave: casualLeaveTaken,
-      earnedLeave: earnedLeaveTaken,
-      sickLeave: sickLeaveTaken,
-      restrictedHoliday: restrictedHolidayTaken,
-      totalLeave: totalLeave,
-    };
+  const totalLeave =
+    casualLeaveTaken +
+    earnedLeaveTaken +
+    sickLeaveTaken +
+    restrictedHolidayTaken;
+
+  return {
+    casualLeave: casualLeaveTaken,
+    earnedLeave: earnedLeaveTaken,
+    sickLeave: sickLeaveTaken,
+    restrictedHoliday: restrictedHolidayTaken,
+    totalLeave: totalLeave,
   };
+};
 
-  const leaveStats = calculateLeaveStats();
+const leaveStats = calculateLeaveStats();
 
   // Get unique employee names for dropdown
   const uniqueEmployeeNames = [
@@ -211,25 +224,28 @@ const LeaveManagement = () => {
     fetchHodNames(); // Fetch HOD names on component mount
   }, []);
 
-  const handleCheckboxChange = (leaveId, rowData) => {
-    if (selectedRow?.serialNo === leaveId) {
-      setSelectedRow(null);
-      setEditableDates({ from: "", to: "" });
-    } else {
-      // Convert DD/MM/YYYY to YYYY-MM-DD for date input
-      const formatForInput = (dateStr) => {
-        if (!dateStr) return "";
-        const [day, month, year] = dateStr.split("/");
+const handleCheckboxChange = (leaveId, rowData) => {
+  if (selectedRow?.serialNo === leaveId) {
+    setSelectedRow(null);
+    setEditableDates({ from: "", to: "" });
+  } else {
+    // Convert MM/DD/YYYY to YYYY-MM-DD for date input
+    const formatForInput = (dateStr) => {
+      if (!dateStr) return "";
+      if (dateStr.includes("/")) {
+        const [month, day, year] = dateStr.split("/");
         return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-      };
+      }
+      return dateStr;
+    };
 
-      setSelectedRow(rowData);
-      setEditableDates({
-        from: formatForInput(rowData.startDate),
-        to: formatForInput(rowData.endDate),
-      });
-    }
-  };
+    setSelectedRow(rowData);
+    setEditableDates({
+      from: formatForInput(rowData.startDate),
+      to: formatForInput(rowData.endDate),
+    });
+  }
+};
 
   const handleDateChange = (field, value) => {
     setEditableDates((prev) => ({
@@ -354,26 +370,37 @@ const handleEmployeeChange = async (selectedName) => {
     return diffDays;
   };
 
-  const formatDOB = (dateString) => {
-    if (!dateString) return "";
+const formatDOB = (dateString) => {
+  if (!dateString) return "";
 
-    // If it's already in DD/MM/YYYY format, return as-is
-    if (dateString.includes("/")) {
-      return dateString;
+  // If it's already in MM/DD/YYYY format, return as-is
+  if (dateString.includes("/") && dateString.split("/")[0].length <= 2) {
+    const parts = dateString.split("/");
+    if (parts.length === 3) {
+      const [first, second, third] = parts;
+      // Check if it's already in MM/DD/YYYY format (first part <= 12)
+      if (first <= 12 && second <= 31) {
+        return dateString;
+      }
+      // If it's in DD/MM/YYYY format, convert to MM/DD/YYYY
+      if (second <= 12 && first <= 31) {
+        return `${second.padStart(2, "0")}/${first.padStart(2, "0")}/${third}`;
+      }
     }
+  }
 
-    // Convert from YYYY-MM-DD to DD/MM/YYYY
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return dateString; // Return as-is if not a valid date
-    }
+  // Convert from YYYY-MM-DD to MM/DD/YYYY
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return dateString; // Return as-is if not a valid date
+  }
 
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  const year = date.getFullYear();
 
-    return `${day}/${month}/${year}`;
-  };
+  return `${month}/${day}/${year}`;
+};
 
 const handleSubmit = async (e) => {
   e.preventDefault();
@@ -471,86 +498,152 @@ const handleLeaveAction = async (action) => {
   setLoading(true);
 
   try {
-    const fullDataResponse = await fetch(
-      "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=Leave Management&action=fetch"
-    );
-
-    if (!fullDataResponse.ok) {
-      throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
-    }
-
-    const fullDataResult = await fullDataResponse.json();
-    const allData = fullDataResult.data || fullDataResult;
-
-    // Find the row index by matching Column B (serial number) and Column C (employee ID)
-    const rowIndex = allData.findIndex(
-      (row, idx) =>
-        idx > 0 && // Skip header row
-        row[1]?.toString().trim() ===
-          selectedRow.serialNo?.toString().trim() &&
-        row[2]?.toString().trim() ===
-          selectedRow.employeeId?.toString().trim()
-    );
-
-    if (rowIndex === -1) {
-      throw new Error(
-        `Leave request not found for employee ${selectedRow.employeeId}`
-      );
-    }
-
-    let currentRow = [...allData[rowIndex]];
-
     const today = new Date();
     const day = String(today.getDate()).padStart(2, "0");
     const month = String(today.getMonth() + 1).padStart(2, "0");
     const year = today.getFullYear();
     const formattedDate = `${day}/${month}/${year}`;
 
-    // Update dates if they were changed (Column E and F)
-    if (editableDates.from && editableDates.from !== selectedRow.startDate) {
-      currentRow[4] = formatDOB(editableDates.from); // Convert to DD/MM/YYYY
-    }
-
-    if (editableDates.to && editableDates.to !== selectedRow.endDate) {
-      currentRow[5] = formatDOB(editableDates.to); // Convert to DD/MM/YYYY
-    }
-
-    // Update timestamp (Column A), status (Column H, index 7), and Column M (index 12)
-    currentRow[0] = formattedDate;
-    currentRow[7] = action === "accept" ? "approved" : "rejected";
-    currentRow[12] = "approved"; // Always set Column M to "approved" when action is taken
-
-    const payload = {
+    // Prepare the update payload
+    const updateData = {
       sheetName: "Leave Management",
-      action: "update",
-      rowIndex: rowIndex + 1, // Add 1 because Google Sheets rows are 1-indexed
-      rowData: JSON.stringify(currentRow),
+      action: "updateCell",
+      rowIndex: selectedRow.rowIndex || (allData.findIndex(
+        (row, idx) =>
+          idx > 0 &&
+          row[1]?.toString().trim() === selectedRow.serialNo?.toString().trim() &&
+          row[2]?.toString().trim() === selectedRow.employeeId?.toString().trim()
+      ) + 1),
     };
 
-    const response = await fetch(
+    // Update Column A (timestamp)
+    const timestampPayload = {
+      ...updateData,
+      columnIndex: 1,
+      value: formattedDate
+    };
+
+    const timestampResponse = await fetch(
       "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams(payload).toString(),
+        body: new URLSearchParams(timestampPayload).toString(),
       }
     );
 
-    const result = await response.json();
-    if (result.success) {
-      toast.success(
-        `Leave ${action === "accept" ? "approved" : "rejected"} for ${
-          selectedRow.employeeName || "employee"
-        }`
-      );
-      fetchLeaveData();
-      setSelectedRow(null);
-      setEditableDates({ from: "", to: "" });
-    } else {
-      throw new Error(result.error || "Update failed");
+    const timestampResult = await timestampResponse.json();
+    if (!timestampResult.success) {
+      throw new Error("Failed to update timestamp");
     }
+
+    // Update Column E (start date) if changed
+    if (editableDates.from && editableDates.from !== selectedRow.startDate) {
+      const startDatePayload = {
+        ...updateData,
+        columnIndex: 5,
+        value: formatDOB(editableDates.from)
+      };
+
+      const startDateResponse = await fetch(
+        "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams(startDatePayload).toString(),
+        }
+      );
+
+      const startDateResult = await startDateResponse.json();
+      if (!startDateResult.success) {
+        throw new Error("Failed to update start date");
+      }
+    }
+
+    // Update Column F (end date) if changed
+    if (editableDates.to && editableDates.to !== selectedRow.endDate) {
+      const endDatePayload = {
+        ...updateData,
+        columnIndex: 6,
+        value: formatDOB(editableDates.to)
+      };
+
+      const endDateResponse = await fetch(
+        "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams(endDatePayload).toString(),
+        }
+      );
+
+      const endDateResult = await endDateResponse.json();
+      if (!endDateResult.success) {
+        throw new Error("Failed to update end date");
+      }
+    }
+
+    // Update Column H (status)
+    const statusPayload = {
+      ...updateData,
+      columnIndex: 8,
+      value: action === "accept" ? "approved" : "rejected"
+    };
+
+    const statusResponse = await fetch(
+      "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams(statusPayload).toString(),
+      }
+    );
+
+    const statusResult = await statusResponse.json();
+    if (!statusResult.success) {
+      throw new Error("Failed to update status");
+    }
+
+    // Update Column M (HOD approval status)
+    const hodPayload = {
+      ...updateData,
+      columnIndex: 13,
+      value: "approved"
+    };
+
+    const hodResponse = await fetch(
+      "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams(hodPayload).toString(),
+      }
+    );
+
+    const hodResult = await hodResponse.json();
+    if (!hodResult.success) {
+      throw new Error("Failed to update HOD approval status");
+    }
+
+    toast.success(
+      `Leave ${action === "accept" ? "approved" : "rejected"} for ${
+        selectedRow.employeeName || "employee"
+      }`
+    );
+    fetchLeaveData();
+    setSelectedRow(null);
+    setEditableDates({ from: "", to: "" });
+
   } catch (error) {
     console.error("Update error:", error);
     toast.error(`Failed to ${action} leave: ${error.message}`);
@@ -589,7 +682,7 @@ const fetchLeaveData = async () => {
 
     const dataRows = rawData.length > 1 ? rawData.slice(1) : [];
 
-    const processedData = dataRows.map((row) => ({
+    const processedData = dataRows.map((row, index) => ({
       timestamp: row[0] || "",
       serialNo: row[1] || "",
       employeeId: row[2] || "",
@@ -597,11 +690,12 @@ const fetchLeaveData = async () => {
       startDate: row[4] || "",
       endDate: row[5] || "",
       remark: row[6] || "",
-      days: calculateDays(row[4], row[5]),
-      status: row[7], // Column H (index 7)
-      leaveType: row[8],
+      status: row[7] || "", // Column H (index 7) - Status
+      leaveType: row[8] || "",
       hodName: row[9] || "",
       columnMStatus: row[12] || "", // Column M (index 12)
+      days: row[13] || 0, // Column N (index 13) - Days
+      rowIndex: index + 2, // Store the actual row index for updates
     }));
 
     // Filter based on both Column H and Column M
@@ -641,11 +735,22 @@ const fetchLeaveData = async () => {
     fetchEmployees();
   }, []);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return isNaN(date.getTime()) ? dateString : date.toLocaleDateString();
-  };
+const formatDate = (dateString) => {
+  if (!dateString) return "-";
+  
+  // Handle MM/DD/YYYY format and convert to DD/MM/YYYY
+  if (dateString.includes("/")) {
+    const parts = dateString.split("/");
+    if (parts.length === 3) {
+      const [month, day, year] = parts;
+      return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
+    }
+  }
+  
+  // Fallback for other date formats
+  const date = new Date(dateString);
+  return isNaN(date.getTime()) ? dateString : date.toLocaleDateString();
+};
 
   const filteredPendingLeaves = pendingLeaves.filter((item) => {
   const matchesSearch =
@@ -1090,7 +1195,7 @@ const filteredRejectedLeaves = rejectedLeaves.filter((item) => {
 </div>
 
       {/* Leave Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
   <div className="bg-white rounded-xl shadow-lg border p-6">
     <div className="flex items-center justify-between">
       <div>
@@ -1098,10 +1203,12 @@ const filteredRejectedLeaves = rejectedLeaves.filter((item) => {
         <h3 className="text-2xl font-bold text-gray-800">
           {leaveStats.casualLeave}
         </h3>
-        <p className="text-xs text-gray-500">
-          Total Leave : <b>6</b> | Remaining :{" "}
-          <b> {6 - leaveStats.casualLeave}</b>
-        </p>
+        {selectedEmployee !== "all" && (
+          <p className="text-xs text-gray-500">
+            Total Leave : <b>6</b> | Remaining :{" "}
+            <b> {6 - leaveStats.casualLeave}</b>
+          </p>
+        )}
       </div>
     </div>
   </div>
@@ -1113,10 +1220,12 @@ const filteredRejectedLeaves = rejectedLeaves.filter((item) => {
         <h3 className="text-2xl font-bold text-gray-800">
           {leaveStats.earnedLeave}
         </h3>
-        <p className="text-xs text-gray-500">
-          Total Leave : <b>12</b> | Remaining :{" "}
-          <b> {12 - leaveStats.earnedLeave}</b>
-        </p>
+        {selectedEmployee !== "all" && (
+          <p className="text-xs text-gray-500">
+            Total Leave : <b>12</b> | Remaining :{" "}
+            <b> {12 - leaveStats.earnedLeave}</b>
+          </p>
+        )}
       </div>
     </div>
   </div>
@@ -1128,10 +1237,12 @@ const filteredRejectedLeaves = rejectedLeaves.filter((item) => {
         <h3 className="text-2xl font-bold text-gray-800">
           {leaveStats.sickLeave}
         </h3>
-        <p className="text-xs text-gray-500">
-          Total Leave : <b>6</b> | Remaining :{" "}
-          <b> {6 - leaveStats.sickLeave}</b>
-        </p>
+        {selectedEmployee !== "all" && (
+          <p className="text-xs text-gray-500">
+            Total Leave : <b>6</b> | Remaining :{" "}
+            <b> {6 - leaveStats.sickLeave}</b>
+          </p>
+        )}
       </div>
     </div>
   </div>
@@ -1145,10 +1256,12 @@ const filteredRejectedLeaves = rejectedLeaves.filter((item) => {
         <h3 className="text-2xl font-bold text-gray-800">
           {leaveStats.restrictedHoliday}
         </h3>
-        <p className="text-xs text-gray-500">
-          Total Leave : <b>2</b> | Remaining :{" "}
-          <b> {2 - leaveStats.restrictedHoliday}</b>
-        </p>
+        {selectedEmployee !== "all" && (
+          <p className="text-xs text-gray-500">
+            Total Leave : <b>2</b> | Remaining :{" "}
+            <b> {2 - leaveStats.restrictedHoliday}</b>
+          </p>
+        )}
       </div>
     </div>
   </div>
@@ -1160,9 +1273,11 @@ const filteredRejectedLeaves = rejectedLeaves.filter((item) => {
         <h3 className="text-2xl font-bold text-gray-800">
           {leaveStats.totalLeave}
         </h3>
-        <p className="text-xs text-gray-500">
-          All approved days (Current Year)
-        </p>
+        {selectedEmployee !== "all" && (
+          <p className="text-xs text-gray-500">
+            All approved days (Current Year)
+          </p>
+        )}
       </div>
     </div>
   </div>

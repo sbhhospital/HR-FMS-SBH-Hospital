@@ -366,10 +366,10 @@ const fetchAllData = async () => {
     return `${day}-${month}-${year}`;
   };
 
-  const handleShareClick = (item) => {
+const handleShareClick = (item) => {
   setSelectedItem(item);
-  // Create the share link with enquiry number
-  const shareLink = `https://hr-enquiry-form.vercel.app/`;
+  // Create the share link with indent number as a query parameter
+  const shareLink = `https://hr-enquiry-form.vercel.app/?indent=${encodeURIComponent(item.indentNo)}`;
   
   setShareFormData({
     message: `Dear Recipient,\n\nPlease fill the enquiry details for candidate who is applying for the position of ${item.post}.\n\nEnquiry Form Link: ${shareLink}\n\nBest regards,\nHR Team SBH Hospital Raipur (C.G.)`,

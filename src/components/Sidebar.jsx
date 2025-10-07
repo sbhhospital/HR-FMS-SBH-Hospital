@@ -119,6 +119,7 @@ const Sidebar = ({ onClose }) => {
     { path: '/after-leaving-work', icon: UserMinus, label: 'After Leaving Work' },
     { path: '/employee', icon: Users, label: 'Employee' },
     { path: '/leave-management', icon: BookPlus, label: 'Leave Management' },
+    { path: '/misreport', icon: AlarmClockCheck, label: 'Balanced Score Card' },
     { path: '/jobPoster', icon: Brain, label: 'Creative' },
     { path: '/license', icon: AlarmClockCheck, label: 'License' },
   ];

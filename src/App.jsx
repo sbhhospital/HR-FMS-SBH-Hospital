@@ -23,7 +23,7 @@ import LeaveManagement from './pages/LeaveManagement';
 // import Attendancedaily from './pages/Attendancedaily';
 // import Report from './pages/Report';
 // import Payroll from './pages/Payroll';
-// import MisReport from './pages/MisReport';
+import MisReport from './pages/MisReport';
 import Joining from './pages/Joining';
 import License from './pages/License';
 import JobPoster from './pages/JobPoster';
@@ -66,7 +66,7 @@ function App() {
               {/* <Route path="attendancedaily" element={<Attendancedaily />} /> */}
               {/* <Route path="report" element={<Report />} /> */}
               {/* <Route path="payroll" element={<Payroll />} /> */}
-              {/* <Route path="misreport" element={<MisReport />} /> */}
+              <Route path="misreport" element={<MisReport />} />
               <Route path="license" element={<License/>} />
               <Route path="jobPoster" element={<JobPoster/>} />
               <Route path='leaveApproval' element={<LeaveApproval/>} />

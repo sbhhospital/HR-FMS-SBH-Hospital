@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { User, Mail, Phone, MapPin, Calendar, Building, Edit3, Save, X } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { User, Mail, Phone, MapPin, Calendar, Building, Edit3, Save, X, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const MyProfile = () => {
@@ -9,6 +9,166 @@ const MyProfile = () => {
   const [loading, setLoading] = useState(true);
   const [leaveData, setLeaveData] = useState([]);
   const [gatePassData, setGatePassData] = useState([]);
+  const [isHovering, setIsHovering] = useState(false); // Added isHovering state
+  const fileInputRef = useRef(null); // Added fileInputRef
+
+   const handleProfilePictureClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Check if file is an image
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select a valid image file');
+      return;
+    }
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Convert file to base64
+      const base64Data = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          // Remove the data URL prefix if present
+          const result = reader.result;
+          if (typeof result === 'string' && result.includes('base64,')) {
+            resolve(result.split('base64,')[1]);
+          } else {
+            resolve(result);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // Upload to Google Drive
+      const uploadResponse = await fetch(
+        "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            action: "uploadFile",
+            fileName: `profile_${profileData.joiningNo}_${Date.now()}.jpg`,
+            mimeType: file.type,
+            base64Data: base64Data,
+            folderId: "1UNUeS2GN0rLh3BB06DvGYXYbVmzkXCdZ" // Correct folder ID for profile pictures
+          }).toString(),
+        }
+      );
+
+      const uploadResult = await uploadResponse.json();
+      
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || "Failed to upload image");
+      }
+
+      const imageUrl = uploadResult.fileUrl;
+
+      // Find the row with matching Joining No and update Column H
+      const fullDataResponse = await fetch(
+        'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=JOINING&action=fetch'
+      );
+      
+      if (!fullDataResponse.ok) {
+        throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
+      }
+
+      const fullDataResult = await fullDataResponse.json();
+      const allData = fullDataResult.data || fullDataResult;
+
+      // Find header row by looking for the 'SKA-Joining ID' column
+      let headerRowIndex = -1;
+      let headers = [];
+      
+      for (let i = 0; i < allData.length; i++) {
+        const row = allData[i];
+        if (row && Array.isArray(row)) {
+          const joiningIdIndex = row.findIndex(cell => 
+            cell && cell.toString().trim().toLowerCase().includes('ska-joining id')
+          );
+          
+          if (joiningIdIndex !== -1) {
+            headerRowIndex = i;
+            headers = row.map(h => h?.toString().trim());
+            break;
+          }
+        }
+      }
+      
+      if (headerRowIndex === -1) {
+        throw new Error("Could not find header row with 'SKA-Joining ID' column");
+      }
+
+      // Find Employee ID column index
+      const employeeIdIndex = headers.findIndex(h => 
+        h && h.toLowerCase().includes('ska-joining id')
+      );
+      
+      if (employeeIdIndex === -1) {
+        throw new Error("Could not find 'SKA-Joining ID' column");
+      }
+
+      // Find the employee row index
+      const rowIndex = allData.findIndex((row, idx) =>
+        idx > headerRowIndex &&
+        row[employeeIdIndex]?.toString().trim() === profileData.joiningNo?.toString().trim()
+      );
+      
+      if (rowIndex === -1) throw new Error(`Employee ${profileData.joiningNo} not found`);
+
+      // Update the JOINING sheet with the new image URL
+       const updateResponse = await fetch(
+        "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            action: "updateCell",
+            sheetName: "JOINING",
+            rowIndex: rowIndex + 1, // Convert to 1-based index
+            columnIndex: 8, // Column H (1-based index)
+            value: imageUrl
+          }).toString(),
+        }
+      );
+
+      const updateResult = await updateResponse.json();
+
+      
+      if (updateResult.success) {
+        // Update local state
+        setProfileData(prev => ({ ...prev, candidatePhoto: imageUrl }));
+        setFormData(prev => ({ ...prev, candidatePhoto: imageUrl }));
+        toast.success('Profile picture updated successfully!');
+      } else {
+        throw new Error(updateResult.error || "Failed to update profile in sheet");
+      }
+
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      toast.error(`Failed to upload profile picture: ${error.message}`);
+    } finally {
+      setLoading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
 
   const getDisplayableImageUrl = (url) => {
@@ -512,7 +672,7 @@ useEffect(() => {
     return <div className="page-content p-6">No profile data available</div>;
   }
 
-  return (
+   return (
     <div className="space-y-6 page-content p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">My Profile</h1>
@@ -547,10 +707,15 @@ useEffect(() => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile Picture & Basic Info */}
+        {/* Profile Picture & Basic Info - Modified Section */}
         <div className="bg-white rounded-xl shadow-lg border p-6">
           <div className="text-center">
-            <div className="w-32 h-32 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
+            <div 
+              className="relative w-32 h-32 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden cursor-pointer"
+              onMouseEnter={() => setIsHovering(true)}
+              onMouseLeave={() => setIsHovering(false)}
+              onClick={handleProfilePictureClick}
+            >
               {profileData.candidatePhoto ? (
                 <img
                   src={getDisplayableImageUrl(profileData.candidatePhoto)}
@@ -558,15 +723,10 @@ useEffect(() => {
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     console.log("Image failed to load:", e.target.src);
-                    // First try the original URL directly
                     if (e.target.src !== profileData.candidatePhoto) {
-                      console.log(
-                        "Trying original URL:",
-                        profileData.candidatePhoto
-                      );
+                      console.log("Trying original URL:", profileData.candidatePhoto);
                       e.target.src = profileData.candidatePhoto;
                     } else {
-                      // If that also fails, show user icon
                       console.log("Both thumbnail and original URL failed");
                       e.target.style.display = "none";
                       e.target.nextSibling.style.display = "flex";
@@ -584,12 +744,31 @@ useEffect(() => {
               >
                 <User size={48} className="text-indigo-400" />
               </div>
+              
+              {/* Hover overlay with camera icon */}
+              <div 
+                className={`absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-full transition-opacity duration-200 ${
+                  isHovering ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
+                <Camera size={32} className="text-white" />
+              </div>
             </div>
+            
+            {/* Hidden file input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              className="hidden"
+            />
+            
             <h2 className="text-xl font-bold text-gray-800">
               {profileData.candidateName}
             </h2>
-            <p className="text-gray-600">{profileData.designation}</p>
-            <p className="text-sm text-gray-500">{profileData.joiningNo}</p>
+            <p className="text-gray-600 font-bold">{profileData.designation}</p>
+            <p className="text-sm text-gray-500 mt-1">Click on photo to update</p>
           </div>
         </div>
 
@@ -614,9 +793,9 @@ useEffect(() => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Building size={16} className="inline mr-2" />
-                  Designation
+                  Joining ID
                 </label>
-                <p className="text-gray-800">{profileData.designation}</p>
+                <p className="text-gray-800">{profileData.joiningNo}</p>
               </div>
 
               <div>

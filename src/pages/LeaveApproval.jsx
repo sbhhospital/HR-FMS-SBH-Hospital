@@ -113,25 +113,28 @@ const LeaveApproval = () => {
     fetchLeaveData();
   }, []);
 
-  const handleCheckboxChange = (leaveId, rowData) => {
-    if (selectedRow?.serialNo === leaveId) {
-      setSelectedRow(null);
-      setEditableDates({ from: "", to: "" });
-    } else {
-      // Convert DD/MM/YYYY to YYYY-MM-DD for date input
-      const formatForInput = (dateStr) => {
-        if (!dateStr) return "";
-        const [day, month, year] = dateStr.split("/");
+const handleCheckboxChange = (leaveId, rowData) => {
+  if (selectedRow?.serialNo === leaveId) {
+    setSelectedRow(null);
+    setEditableDates({ from: "", to: "" });
+  } else {
+    // Convert MM/DD/YYYY to YYYY-MM-DD for date input
+    const formatForInput = (dateStr) => {
+      if (!dateStr) return "";
+      if (dateStr.includes("/")) {
+        const [month, day, year] = dateStr.split("/");
         return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-      };
+      }
+      return dateStr;
+    };
 
-      setSelectedRow(rowData);
-      setEditableDates({
-        from: formatForInput(rowData.startDate),
-        to: formatForInput(rowData.endDate),
-      });
-    }
-  };
+    setSelectedRow(rowData);
+    setEditableDates({
+      from: formatForInput(rowData.startDate),
+      to: formatForInput(rowData.endDate),
+    });
+  }
+};
 
   const handleDateChange = (field, value) => {
     setEditableDates((prev) => ({
@@ -168,124 +171,201 @@ const LeaveApproval = () => {
     return diffDays;
   };
 
-  const formatDOB = (dateString) => {
-    if (!dateString) return "";
+const formatDOB = (dateString) => {
+  if (!dateString) return "";
 
-    // If it's already in DD/MM/YYYY format, return as-is
-    if (dateString.includes("/")) {
-      return dateString;
+  // If it's already in MM/DD/YYYY format, return as-is
+  if (dateString.includes("/") && dateString.split("/")[0].length <= 2) {
+    const parts = dateString.split("/");
+    if (parts.length === 3) {
+      const [first, second, third] = parts;
+      // Check if it's already in MM/DD/YYYY format (first part <= 12)
+      if (first <= 12 && second <= 31) {
+        return dateString;
+      }
+      // If it's in DD/MM/YYYY format, convert to MM/DD/YYYY
+      if (second <= 12 && first <= 31) {
+        return `${second.padStart(2, "0")}/${first.padStart(2, "0")}/${third}`;
+      }
+    }
+  }
+
+  // Convert from YYYY-MM-DD to MM/DD/YYYY
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return dateString; // Return as-is if not a valid date
+  }
+
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  const year = date.getFullYear();
+
+  return `${month}/${day}/${year}`;
+};
+
+const handleLeaveAction = async (action) => {
+  if (!selectedRow) {
+    toast.error("Please select a leave request");
+    return;
+  }
+
+  setActionInProgress(action);
+  setLoading(true);
+
+  try {
+    const fullDataResponse = await fetch(
+      "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=Leave Management&action=fetch"
+    );
+
+    if (!fullDataResponse.ok) {
+      throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
     }
 
-    // Convert from YYYY-MM-DD to DD/MM/YYYY
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return dateString; // Return as-is if not a valid date
-    }
+    const fullDataResult = await fullDataResponse.json();
+    const allData = fullDataResult.data || fullDataResult;
 
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
+    // Find the row index by matching Column B (serial number) and Column C (employee ID)
+    const rowIndex = allData.findIndex(
+      (row, idx) =>
+        idx > 0 && // Skip header row
+        row[1]?.toString().trim() ===
+          selectedRow.serialNo?.toString().trim() &&
+        row[2]?.toString().trim() ===
+          selectedRow.employeeId?.toString().trim()
+    );
 
-    return `${day}/${month}/${year}`;
-  };
-
-  const handleLeaveAction = async (action) => {
-    if (!selectedRow) {
-      toast.error("Please select a leave request");
-      return;
-    }
-
-    setActionInProgress(action);
-    setLoading(true);
-
-    try {
-      const fullDataResponse = await fetch(
-        "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=Leave Management&action=fetch"
+    if (rowIndex === -1) {
+      throw new Error(
+        `Leave request not found for employee ${selectedRow.employeeId}`
       );
+    }
 
-      if (!fullDataResponse.ok) {
-        throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, "0");
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const year = today.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+
+    // Prepare only the columns we want to update
+    const updateData = {
+      sheetName: "Leave Management",
+      action: "updateCell", // Change to updateCell action
+      rowIndex: rowIndex + 1, // Add 1 because Google Sheets rows are 1-indexed
+    };
+
+    // Update Column A (timestamp)
+    const timestampPayload = {
+      ...updateData,
+      columnIndex: 1, // Column A
+      value: formattedDate
+    };
+
+    const timestampResponse = await fetch(
+      "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams(timestampPayload).toString(),
       }
+    );
 
-      const fullDataResult = await fullDataResponse.json();
-      const allData = fullDataResult.data || fullDataResult;
+    const timestampResult = await timestampResponse.json();
+    if (!timestampResult.success) {
+      throw new Error("Failed to update timestamp");
+    }
 
-      // Find the row index by matching Column B (serial number) and Column C (employee ID)
-      const rowIndex = allData.findIndex(
-        (row, idx) =>
-          idx > 0 && // Skip header row
-          row[1]?.toString().trim() ===
-            selectedRow.serialNo?.toString().trim() &&
-          row[2]?.toString().trim() ===
-            selectedRow.employeeId?.toString().trim()
-      );
-
-      if (rowIndex === -1) {
-        throw new Error(
-          `Leave request not found for employee ${selectedRow.employeeId}`
-        );
-      }
-
-      let currentRow = [...allData[rowIndex]];
-
-      const today = new Date();
-      const day = String(today.getDate()).padStart(2, "0");
-      const month = String(today.getMonth() + 1).padStart(2, "0");
-      const year = today.getFullYear();
-      const formattedDate = `${day}/${month}/${year}`;
-
-      // Update dates if they were changed (Column E and F)
-      if (editableDates.from && editableDates.from !== selectedRow.startDate) {
-        currentRow[4] = formatDOB(editableDates.from); // Convert to DD/MM/YYYY
-      }
-
-      if (editableDates.to && editableDates.to !== selectedRow.endDate) {
-        currentRow[5] = formatDOB(editableDates.to); // Convert to DD/MM/YYYY
-      }
-
-      // Update timestamp (Column A) and HOD approval status (Column M, index 12)
-      currentRow[0] = formattedDate;
-      currentRow[12] = action === "accept" ? "approved" : "rejected";
-
-      const payload = {
-        sheetName: "Leave Management",
-        action: "update",
-        rowIndex: rowIndex + 1, // Add 1 because Google Sheets rows are 1-indexed
-        rowData: JSON.stringify(currentRow),
+    // Update Column E (start date) if changed
+    if (editableDates.from && editableDates.from !== selectedRow.startDate) {
+      const startDatePayload = {
+        ...updateData,
+        columnIndex: 5, // Column E
+        value: formatDOB(editableDates.from)
       };
 
-      const response = await fetch(
+      const startDateResponse = await fetch(
         "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
           },
-          body: new URLSearchParams(payload).toString(),
+          body: new URLSearchParams(startDatePayload).toString(),
         }
       );
 
-      const result = await response.json();
-      if (result.success) {
-        toast.success(
-          `Leave ${action === "accept" ? "approved" : "rejected"} for ${
-            selectedRow.employeeName || "employee"
-          }`
-        );
-        fetchLeaveData();
-        setSelectedRow(null);
-        setEditableDates({ from: "", to: "" });
-      } else {
-        throw new Error(result.error || "Update failed");
+      const startDateResult = await startDateResponse.json();
+      if (!startDateResult.success) {
+        throw new Error("Failed to update start date");
       }
-    } catch (error) {
-      console.error("Update error:", error);
-      toast.error(`Failed to ${action} leave: ${error.message}`);
-    } finally {
-      setLoading(false);
-      setActionInProgress(null);
     }
-  };
+
+    // Update Column F (end date) if changed
+    if (editableDates.to && editableDates.to !== selectedRow.endDate) {
+      const endDatePayload = {
+        ...updateData,
+        columnIndex: 6, // Column F
+        value: formatDOB(editableDates.to)
+      };
+
+      const endDateResponse = await fetch(
+        "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams(endDatePayload).toString(),
+        }
+      );
+
+      const endDateResult = await endDateResponse.json();
+      if (!endDateResult.success) {
+        throw new Error("Failed to update end date");
+      }
+    }
+
+    // Update Column M (HOD approval status)
+    const approvalPayload = {
+      ...updateData,
+      columnIndex: 13, // Column M
+      value: action === "accept" ? "approved" : "rejected"
+    };
+
+    const approvalResponse = await fetch(
+      "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams(approvalPayload).toString(),
+      }
+    );
+
+    const approvalResult = await approvalResponse.json();
+    if (!approvalResult.success) {
+      throw new Error("Failed to update approval status");
+    }
+
+    toast.success(
+      `Leave ${action === "accept" ? "approved" : "rejected"} for ${
+        selectedRow.employeeName || "employee"
+      }`
+    );
+    fetchLeaveData();
+    setSelectedRow(null);
+    setEditableDates({ from: "", to: "" });
+
+  } catch (error) {
+    console.error("Update error:", error);
+    toast.error(`Failed to ${action} leave: ${error.message}`);
+  } finally {
+    setLoading(false);
+    setActionInProgress(null);
+  }
+};
 
   const fetchLeaveData = async () => {
     setLoading(true);
@@ -323,7 +403,7 @@ const LeaveApproval = () => {
         startDate: row[4] || "",
         endDate: row[5] || "",
         remark: row[6] || "",
-        days: calculateDays(row[4], row[5]),
+        days: row[13],
         status: row[7],
         leaveType: row[8],
         hodName: row[9] || "",
@@ -362,11 +442,22 @@ const LeaveApproval = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return isNaN(date.getTime()) ? dateString : date.toLocaleDateString();
-  };
+const formatDate = (dateString) => {
+  if (!dateString) return "-";
+  
+  // Handle MM/DD/YYYY format and convert to DD/MM/YYYY
+  if (dateString.includes("/")) {
+    const parts = dateString.split("/");
+    if (parts.length === 3) {
+      const [month, day, year] = parts;
+      return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
+    }
+  }
+  
+  // Fallback for other date formats
+  const date = new Date(dateString);
+  return isNaN(date.getTime()) ? dateString : date.toLocaleDateString();
+};
 
   const filteredPendingLeaves = pendingLeaves.filter((item) => {
     const matchesSearch =

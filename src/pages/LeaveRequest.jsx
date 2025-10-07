@@ -292,37 +292,58 @@ const formatDOB = (dateString) => {
   // If already in dd/mm/yyyy format, return as-is
   if (typeof dateString === 'string' && dateString.includes('/')) {
     const parts = dateString.split('/');
-    if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+    // Check if it's in mm/dd/yyyy format (first part > 12)
+    if (parts.length === 3 && parseInt(parts[0]) > 12) {
+      // It's already in dd/mm/yyyy format
       return dateString;
+    } else if (parts.length === 3) {
+      // It's in mm/dd/yyyy format, convert to dd/mm/yyyy
+      const [month, day, year] = parts;
+      return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
     }
   }
   
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) {
-    return dateString; // Return as-is if not a valid date
+  // Handle other date formats or invalid dates
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return dateString; // Return as-is if not a valid date
+    }
+    
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    
+    return `${day}/${month}/${year}`;
+  } catch (error) {
+    return dateString; // Return original if parsing fails
   }
-  
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear();
-  
-  return `${day}/${month}/${year}`;
 };
 
   // Function to parse date string in DD/MM/YYYY format
-  const parseDate = (dateStr) => {
-    if (!dateStr) return null;
-    
-    // Handle different date formats that might come from the API
-    if (dateStr.includes('/')) {
-      const [day, month, year] = dateStr.split('/').map(Number);
-      return new Date(year, month - 1, day);
-    } else if (dateStr.includes('-')) {
-      return new Date(dateStr);
+const parseDate = (dateStr) => {
+  if (!dateStr) return null;
+  
+  // Handle different date formats that might come from the API
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/').map(Number);
+    if (parts.length === 3) {
+      // Check if it's mm/dd/yyyy format (first part <= 12)
+      if (parts[0] <= 12) {
+        const [month, day, year] = parts;
+        return new Date(year, month - 1, day);
+      } else {
+        // It's dd/mm/yyyy format
+        const [day, month, year] = parts;
+        return new Date(year, month - 1, day);
+      }
     }
-    
-    return null;
-  };
+  } else if (dateStr.includes('-')) {
+    return new Date(dateStr);
+  }
+  
+  return null;
+};
 
   // Check if a date falls within a specific month and year
   const isDateInSelectedPeriod = (dateStr, monthIndex, year) => {
@@ -364,10 +385,12 @@ const fetchLeaveData = async () => {
     const dataRows = rawData.length > 1 ? rawData.slice(1) : [];
     
     // Process and filter data by employee name
-    // Update column indices according to your requirements:
+    // Updated column indices according to your requirements:
     // Column E (index 4) - From Date
     // Column F (index 5) - To Date
-    // Column L (index 11) - Leave Type
+    // Column H (index 7) - Status
+    // Column I (index 8) - Leave Type
+    // Column N (index 13) - Days
     const processedData = dataRows
       .map((row, index) => ({
         id: index + 1,
@@ -378,9 +401,9 @@ const fetchLeaveData = async () => {
         startDate: row[4] || '', // Column E (index 4) - From Date
         endDate: row[5] || '',   // Column F (index 5) - To Date
         reason: row[6] || '',
-        days: calculateDays(row[4], row[5]),
-        status: row[7] || 'Pending',
-        leaveType: row[8] || '', // Column L (index 11) - Leave Type
+        status: row[7] || 'Pending', // Column H (index 7) - Status
+        leaveType: row[8] || '', // Column I (index 8) - Leave Type
+        days: row[13] || 0, // Column N (index 13) - Days
         appliedDate: row[0] || '', // Using timestamp as applied date
         approvedBy: row[9] || '',
       }))
@@ -530,84 +553,98 @@ const hasSubmittedToday = () => {
   const yearOptions = getYearOptions();
 
   // Calculate leave counts based on selected month and year
- const calculateLeaveStats = () => {
-    const currentYear = new Date().getFullYear();
 
-    // Filter approved leaves for current employee in selected period
-    const relevantLeaves = leavesData.filter(leave => 
-      leave.status && leave.status.toLowerCase() === 'approved' && 
-      leave.employeeName === user.Name
-    );
+const calculateLeaveStats = () => {
+  const currentYear = new Date().getFullYear();
 
-    // Calculate approved leaves for current year
-    const casualLeaveTaken = relevantLeaves
-      .filter((leave) => {
-        const leaveYear = new Date(
-          leave.startDate.split("/").reverse().join("-")
-        ).getFullYear();
-        return (
-          leave.leaveType &&
-          leave.leaveType.toLowerCase().includes("casual") &&
-          leaveYear === currentYear
-        );
-      })
-      .reduce((sum, leave) => sum + leave.days, 0);
+  // Filter approved leaves for current employee
+  const relevantLeaves = leavesData.filter(leave => 
+    leave.status && leave.status.toLowerCase() === 'approved' && 
+    leave.employeeName === user.Name
+  );
 
-    const earnedLeaveTaken = relevantLeaves
-      .filter((leave) => {
-        const leaveYear = new Date(
-          leave.startDate.split("/").reverse().join("-")
-        ).getFullYear();
-        return (
-          leave.leaveType &&
-          leave.leaveType.toLowerCase().includes("earned") &&
-          leaveYear === currentYear
-        );
-      })
-      .reduce((sum, leave) => sum + leave.days, 0);
+  // Calculate approved leaves using days from Column N (index 13)
+  const casualLeaveTaken = relevantLeaves
+    .filter((leave) => {
+      const leaveYear = new Date(
+        leave.startDate.split("/").reverse().join("-")
+      ).getFullYear();
+      return (
+        leave.leaveType &&
+        leave.leaveType.toLowerCase().includes("casual") &&
+        leaveYear === currentYear
+      );
+    })
+    .reduce((sum, leave) => {
+      // Use days from Column N (index 13), fallback to 0 if not available
+      const days = leave.days ? parseInt(leave.days) : 0;
+      return sum + (isNaN(days) ? 0 : days);
+    }, 0);
 
-    const sickLeaveTaken = relevantLeaves
-      .filter((leave) => {
-        const leaveYear = new Date(
-          leave.startDate.split("/").reverse().join("-")
-        ).getFullYear();
-        return (
-          leave.leaveType &&
-          leave.leaveType.toLowerCase().includes("sick") &&
-          leaveYear === currentYear
-        );
-      })
-      .reduce((sum, leave) => sum + leave.days, 0);
+  const earnedLeaveTaken = relevantLeaves
+    .filter((leave) => {
+      const leaveYear = new Date(
+        leave.startDate.split("/").reverse().join("-")
+      ).getFullYear();
+      return (
+        leave.leaveType &&
+        leave.leaveType.toLowerCase().includes("earned") &&
+        leaveYear === currentYear
+      );
+    })
+    .reduce((sum, leave) => {
+      const days = leave.days ? parseInt(leave.days) : 0;
+      return sum + (isNaN(days) ? 0 : days);
+    }, 0);
 
-    const restrictedHolidayTaken = relevantLeaves
-      .filter((leave) => {
-        const leaveYear = new Date(
-          leave.startDate.split("/").reverse().join("-")
-        ).getFullYear();
-        return (
-          leave.leaveType &&
-          leave.leaveType.toLowerCase().includes("restricted") &&
-          leaveYear === currentYear
-        );
-      })
-      .reduce((sum, leave) => sum + leave.days, 0);
+  const sickLeaveTaken = relevantLeaves
+    .filter((leave) => {
+      const leaveYear = new Date(
+        leave.startDate.split("/").reverse().join("-")
+      ).getFullYear();
+      return (
+        leave.leaveType &&
+        leave.leaveType.toLowerCase().includes("sick") &&
+        leaveYear === currentYear
+      );
+    })
+    .reduce((sum, leave) => {
+      const days = leave.days ? parseInt(leave.days) : 0;
+      return sum + (isNaN(days) ? 0 : days);
+    }, 0);
 
-    const totalLeave =
-      casualLeaveTaken +
-      earnedLeaveTaken +
-      sickLeaveTaken +
-      restrictedHolidayTaken;
+  const restrictedHolidayTaken = relevantLeaves
+    .filter((leave) => {
+      const leaveYear = new Date(
+        leave.startDate.split("/").reverse().join("-")
+      ).getFullYear();
+      return (
+        leave.leaveType &&
+        leave.leaveType.toLowerCase().includes("restricted") &&
+        leaveYear === currentYear
+      );
+    })
+    .reduce((sum, leave) => {
+      const days = leave.days ? parseInt(leave.days) : 0;
+      return sum + (isNaN(days) ? 0 : days);
+    }, 0);
 
-    return {
-      casualLeave: casualLeaveTaken,
-      earnedLeave: earnedLeaveTaken,
-      sickLeave: sickLeaveTaken,
-      restrictedHoliday: restrictedHolidayTaken,
-      totalLeave: totalLeave,
-    };
+  const totalLeave =
+    casualLeaveTaken +
+    earnedLeaveTaken +
+    sickLeaveTaken +
+    restrictedHolidayTaken;
+
+  return {
+    casualLeave: casualLeaveTaken,
+    earnedLeave: earnedLeaveTaken,
+    sickLeave: sickLeaveTaken,
+    restrictedHoliday: restrictedHolidayTaken,
+    totalLeave: totalLeave,
   };
+};
 
-  const leaveStats = calculateLeaveStats();
+const leaveStats = calculateLeaveStats();
 
 
 

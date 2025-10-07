@@ -9,7 +9,8 @@ import {
   Cell,
   ResponsiveContainer,
   PieChart,
-  Pie
+  Pie,
+  Legend
 } from 'recharts';
 import {
   Users,
@@ -29,7 +30,7 @@ const Dashboard = () => {
   const [leaveThisMonth, setLeaveThisMonth] = useState(0);
   const [monthlyHiringData, setMonthlyHiringData] = useState([]);
   const [designationData, setDesignationData] = useState([]);
-  const [leaveStatusData, setLeaveStatusData] = useState([]);
+  const [employeeStatusData, setEmployeeStatusData] = useState([]);
   const [leaveTypeData, setLeaveTypeData] = useState([]);
   const [departmentData, setDepartmentData] = useState([]);
 
@@ -45,192 +46,136 @@ const Dashboard = () => {
     return new Date(year, month, day);
   };
 
-  // Fetch Leave Management Data for New Analytics
-  const fetchLeaveManagementAnalytics = async () => {
-    try {
-      const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=Leave%20Management&action=fetch'
-      );
+  // Employee Status Distribution Data
+  useEffect(() => {
+    const employeeStatus = [
+      { name: 'Active', value: activeEmployee, color: '#10B981' },
+      { name: 'Resigned', value: leftEmployee, color: '#EF4444' }
+    ];
+    setEmployeeStatusData(employeeStatus);
+  }, [activeEmployee, leftEmployee]);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+const fetchJoiningCount = async () => {
+  try {
+    const response = await fetch(
+      'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=JOINING&action=fetch'
+    );
 
-      const result = await response.json();
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to fetch data from Leave Management sheet');
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-      const rawData = result.data || result;
-      if (!Array.isArray(rawData)) {
-        throw new Error('Expected array data not received');
-      }
+    const result = await response.json();
 
-      // Assuming headers are in the first row
-      const headers = rawData[0];
-      const dataRows = rawData.slice(1);
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch data from JOINING sheet');
+    }
 
-      // Find column indexes based on the image
-      const statusIndex = headers.findIndex(h => h && h.toString().trim().toLowerCase().includes("status"));
-      const leaveTypeIndex = headers.findIndex(h => h && h.toString().trim().toLowerCase().includes("leave type"));
-      
-      // Count leave status distribution
-      const statusCounts = {};
-      const typeCounts = {};
+    const rawData = result.data || result;
+    if (!Array.isArray(rawData)) {
+      throw new Error('Expected array data not received');
+    }
 
-      dataRows.forEach(row => {
-        // Count by status
-        const status = row[statusIndex]?.toString().trim() || 'Unknown';
-        if (statusCounts[status]) {
-          statusCounts[status] += 1;
-        } else {
-          statusCounts[status] = 1;
+    // Headers are row 6 → index 5
+    const headers = rawData[5];
+    const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
+
+    // Find index of "Status", "Date of Joining", "Designation" and Column Y (index 24)
+    const statusIndex = headers.findIndex(
+      h => h && h.toString().trim().toLowerCase() === "status"
+    );
+    
+    const dateOfJoiningIndex = headers.findIndex(
+      h => h && h.toString().trim().toLowerCase().includes("date of joining")
+    );
+
+    const designationIndex = headers.findIndex(
+      h => h && h.toString().trim().toLowerCase() === "designation"
+    );
+
+    const columnYIndex = 24; // Column Y index
+
+    let activeCount = 0;
+    const monthlyHiring = {};
+    const designationCounts = {};
+    
+    // Initialize monthly hiring data for the last 6 months
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentDate = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const monthIndex = (currentDate.getMonth() - i + 12) % 12;
+      const monthYear = `${months[monthIndex]} ${currentDate.getFullYear()}`;
+      monthlyHiring[monthYear] = { hired: 0 };
+    }
+
+    // Filter out rows that have values in Column Y
+    const filteredDataRows = dataRows.filter(row => 
+      !row[columnYIndex] || row[columnYIndex].toString().trim() === ''
+    );
+
+    if (statusIndex !== -1) {
+      activeCount = filteredDataRows.filter(
+        row => row[statusIndex]?.toString().trim().toLowerCase() === "active"
+      ).length;
+    }
+
+    // Count hires by month if date of joining column exists
+    if (dateOfJoiningIndex !== -1) {
+      filteredDataRows.forEach(row => {
+        const dateStr = row[dateOfJoiningIndex];
+        if (dateStr) {
+          const date = parseSheetDate(dateStr);
+          if (date) {
+            const monthYear = `${months[date.getMonth()]} ${date.getFullYear()}`;
+            if (monthlyHiring[monthYear]) {
+              monthlyHiring[monthYear].hired += 1;
+            } else {
+              monthlyHiring[monthYear] = { hired: 1 };
+            }
+          }
         }
+      });
+    }
 
-        // Count by leave type
-        const leaveType = row[leaveTypeIndex]?.toString().trim() || 'Unknown';
-        if (typeCounts[leaveType]) {
-          typeCounts[leaveType] += 1;
-        } else {
-          typeCounts[leaveType] = 1;
+    // Count employees by designation
+    if (designationIndex !== -1) {
+      filteredDataRows.forEach(row => {
+        const designation = row[designationIndex]?.toString().trim();
+        if (designation) {
+          if (designationCounts[designation]) {
+            designationCounts[designation] += 1;
+          } else {
+            designationCounts[designation] = 1;
+          }
         }
       });
 
-      // Convert to array format for charts
-      const statusArray = Object.keys(statusCounts).map(key => ({
-        status: key,
-        count: statusCounts[key]
+      // Convert to array format for the chart
+      const designationArray = Object.keys(designationCounts).map(key => ({
+        designation: key,
+        employees: designationCounts[key]
       }));
 
-      const typeArray = Object.keys(typeCounts).map(key => ({
-        type: key,
-        count: typeCounts[key]
-      }));
-
-      setLeaveStatusData(statusArray);
-      setLeaveTypeData(typeArray);
-
-    } catch (error) {
-      console.error("Error fetching leave management analytics:", error);
-      setLeaveStatusData([]);
-      setLeaveTypeData([]);
+      setDesignationData(designationArray);
     }
-  };
 
-  const fetchJoiningCount = async () => {
-    try {
-      const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=JOINING&action=fetch'
-      );
-  
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-  
-      const result = await response.json();
-  
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to fetch data from JOINING sheet');
-      }
-  
-      const rawData = result.data || result;
-      if (!Array.isArray(rawData)) {
-        throw new Error('Expected array data not received');
-      }
-  
-      // Headers are row 6 → index 5
-      const headers = rawData[5];
-      const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
-  
-      // Find index of "Status", "Date of Joining", and "Designation" columns
-      const statusIndex = headers.findIndex(
-        h => h && h.toString().trim().toLowerCase() === "status"
-      );
-      
-      const dateOfJoiningIndex = headers.findIndex(
-        h => h && h.toString().trim().toLowerCase().includes("date of joining")
-      );
+    // Update state with filtered data
+    setActiveEmployee(filteredDataRows.length);
+    
+    // Return both counts and monthly hiring data
+    return { 
+      total: filteredDataRows.length, 
+      active: activeCount,
+      monthlyHiring 
+    };
 
-      const designationIndex = headers.findIndex(
-        h => h && h.toString().trim().toLowerCase() === "designation"
-      );
-  
-      let activeCount = 0;
-      const monthlyHiring = {};
-      const designationCounts = {};
-      
-      // Initialize monthly hiring data for the last 6 months
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const currentDate = new Date();
-      for (let i = 5; i >= 0; i--) {
-        const monthIndex = (currentDate.getMonth() - i + 12) % 12;
-        const monthYear = `${months[monthIndex]} ${currentDate.getFullYear()}`;
-        monthlyHiring[monthYear] = { hired: 0 };
-      }
-  
-      if (statusIndex !== -1) {
-        activeCount = dataRows.filter(
-          row => row[statusIndex]?.toString().trim().toLowerCase() === "active"
-        ).length;
-      }
-  
-      // Count hires by month if date of joining column exists
-      if (dateOfJoiningIndex !== -1) {
-        dataRows.forEach(row => {
-          const dateStr = row[dateOfJoiningIndex];
-          if (dateStr) {
-            const date = parseSheetDate(dateStr);
-            if (date) {
-              const monthYear = `${months[date.getMonth()]} ${date.getFullYear()}`;
-              if (monthlyHiring[monthYear]) {
-                monthlyHiring[monthYear].hired += 1;
-              } else {
-                monthlyHiring[monthYear] = { hired: 1 };
-              }
-            }
-          }
-        });
-      }
+  } catch (error) {
+    console.error("Error fetching joining count:", error);
+    return { total: 0, active: 0, monthlyHiring: {} };
+  }
+};
 
-      // Count employees by designation
-      if (designationIndex !== -1) {
-        dataRows.forEach(row => {
-          const designation = row[designationIndex]?.toString().trim();
-          if (designation) {
-            if (designationCounts[designation]) {
-              designationCounts[designation] += 1;
-            } else {
-              designationCounts[designation] = 1;
-            }
-          }
-        });
-
-        // Convert to array format for the chart
-        const designationArray = Object.keys(designationCounts).map(key => ({
-          designation: key,
-          employees: designationCounts[key]
-        }));
-
-        setDesignationData(designationArray);
-      }
-  
-      // Update state
-      setActiveEmployee(dataRows.length);
-      
-      // Return both counts and monthly hiring data
-      return { 
-        total: dataRows.length, 
-        active: activeCount,
-        monthlyHiring 
-      };
-  
-    } catch (error) {
-      console.error("Error fetching joining count:", error);
-      return { total: 0, active: 0, monthlyHiring: {} };
-    }
-  };
-
-  const fetchDepartmentData = async () => {
+const fetchDepartmentData = async () => {
   try {
     const response = await fetch(
       'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=JOINING&action=fetch'
@@ -254,13 +199,19 @@ const Dashboard = () => {
     const headers = rawData[5];
     const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
 
-    // Find index of "Department" column (Column U, index 20)
+    // Find index of "Department" column (Column U, index 20) and Column Y (index 24)
     const departmentIndex = 20;
+    const columnYIndex = 24;
+
+    // Filter out rows that have values in Column Y
+    const filteredDataRows = dataRows.filter(row => 
+      !row[columnYIndex] || row[columnYIndex].toString().trim() === ''
+    );
 
     const departmentCounts = {};
 
     // Count employees by department
-    dataRows.forEach(row => {
+    filteredDataRows.forEach(row => {
       const department = row[departmentIndex]?.toString().trim();
       if (department) {
         if (departmentCounts[department]) {
@@ -389,16 +340,6 @@ const Dashboard = () => {
   };
 
   // Color palette for charts
-  const getStatusColor = (status) => {
-    const colors = {
-      'approved': '#10B981',
-      'pending': '#F59E0B',
-      'rejected': '#EF4444',
-      'cancelled': '#6B7280'
-    };
-    return colors[status.toLowerCase()] || '#3B82F6';
-  };
-
   const getTypeColor = (index) => {
     const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
     return colors[index % colors.length];
@@ -410,8 +351,7 @@ useEffect(() => {
       const [joiningResult, leavingResult, departmentResult] = await Promise.all([
         fetchJoiningCount(),
         fetchLeaveCount(),
-        fetchDepartmentData(),
-        fetchLeaveManagementAnalytics()
+        fetchDepartmentData()
       ]);
 
       setTotalEmployee(joiningResult.total + leavingResult.total);
@@ -482,17 +422,46 @@ useEffect(() => {
 
       {/* New Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Leave Status Distribution Chart */}
+        {/* Employee Status Distribution Chart */}
         <div className="bg-white rounded-xl shadow-lg border p-6">
           <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
-            <FileText size={20} className="mr-2" />
-            Leave Status Distribution
+            <Users size={20} className="mr-2" />
+            Employee Status Distribution
           </h2>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={leaveStatusData}>
+              <PieChart>
+                <Pie
+                  data={employeeStatusData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  dataKey="value"
+                  nameKey="name"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {employeeStatusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend wrapperStyle={{ color: '#374151' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Department-wise Employee Count Chart */}
+        <div className="bg-white rounded-xl shadow-lg border p-6">
+          <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
+            <Users size={20} className="mr-2" />
+            Department-wise Employee Count
+          </h2>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={departmentData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
-                <XAxis dataKey="status" stroke="#374151" />
+                <XAxis dataKey="department" stroke="#374151" />
                 <YAxis stroke="#374151" />
                 <Tooltip
                   contentStyle={{
@@ -502,11 +471,11 @@ useEffect(() => {
                     color: '#374151'
                   }}
                 />
-                <Bar dataKey="count" name="Number of Leaves">
-                  {leaveStatusData.map((entry, index) => (
+                <Bar dataKey="employees" name="Employees">
+                  {departmentData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={getStatusColor(entry.status)}
+                      fill={index % 3 === 0 ? '#EF4444' : index % 3 === 1 ? '#10B981' : '#3B82F6'}
                     />
                   ))}
                 </Bar>
@@ -514,39 +483,6 @@ useEffect(() => {
             </ResponsiveContainer>
           </div>
         </div>
-
-        {/* Leave Type Distribution Chart */}
-        <div className="bg-white rounded-xl shadow-lg border p-6">
-  <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
-    <Users size={20} className="mr-2" />
-    Department-wise Employee Count
-  </h2>
-  <div className="h-80">
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={departmentData}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
-        <XAxis dataKey="department" stroke="#374151" />
-        <YAxis stroke="#374151" />
-        <Tooltip
-          contentStyle={{
-            backgroundColor: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px',
-            color: '#374151'
-          }}
-        />
-        <Bar dataKey="employees" name="Employees">
-          {departmentData.map((entry, index) => (
-            <Cell
-              key={`cell-${index}`}
-              fill={index % 3 === 0 ? '#EF4444' : index % 3 === 1 ? '#10B981' : '#3B82F6'}
-            />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
-  </div>
-</div>
       </div>
 
       {/* Designation-wise Employee Count */}
