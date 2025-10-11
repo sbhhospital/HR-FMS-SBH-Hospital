@@ -21,58 +21,16 @@ const LeaveRequest = () => {
   const [formData, setFormData] = useState({
     employeeId: employeeId,
     employeeName: user.Name || '',
-    department: '', // Changed from designation to department
-    hodName: '', // Will be auto-filled
-    substitute: '', // New field for substitute
+    department: '',
+    hodName: '', // Will be selected from dropdown
+    substitute: '',
     leaveType: '',
     fromDate: '',
     toDate: '',
     reason: ''
   });
 
-   const fetchHodNameByDepartment = async (department) => {
-    if (!department) return "";
-    
-    try {
-      const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=USER&action=fetch"
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to fetch USER data");
-      }
-
-      const rawData = result.data || result;
-
-      if (!Array.isArray(rawData)) {
-        throw new Error("Expected array data not received");
-      }
-
-      // USER sheet structure:
-      // Column F (index 5) - Department
-      // Column G (index 6) - HOD Status (Yes/No)
-      // Column A (index 0) - Name
-      const hodData = rawData
-        .slice(1) // Skip header row
-        .find(row => 
-          row[5]?.toString().trim().toLowerCase() === department.toLowerCase() && 
-          row[6]?.toString().trim().toLowerCase() === "yes"
-        );
-
-      return hodData ? hodData[2]?.toString().trim() : ""; // Return name from Column A
-    } catch (error) {
-      console.error("Error fetching HOD data:", error);
-      return "";
-    }
-  };
-
-  const fetchHodNames = async () => {
+ const fetchHodNames = async () => {
     try {
       const response = await fetch(
         'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=Master&action=fetch'
@@ -94,7 +52,7 @@ const LeaveRequest = () => {
         throw new Error('Expected array data not received');
       }
 
-      // Skip the first row (header) and get HOD names from Column A (index 0)
+      // Skip the first row (header) and get all names from Column A (index 0)
       const hodData = rawData.slice(1).map(row => row[0] || '').filter(name => name);
       
       setHodNames(hodData);
@@ -127,32 +85,20 @@ const LeaveRequest = () => {
         throw new Error('Expected array data not received');
       }
 
-      // Data starts from row 7 (index 6)
-      // Column C (index 2) contains Employee Name
-      // Column B (index 1) contains Employee ID
-      // Column U (index 20) contains Department (changed from designation)
       const employeeRow = rawData.slice(6).find(row => 
         row[2]?.toString().trim().toLowerCase() === user.Name?.toString().trim().toLowerCase()
       );
       
       if (employeeRow) {
         const employeeId = employeeRow[1] || '';
-        const department = employeeRow[20] || ''; // Column U for department
+        const department = employeeRow[20] || '';
         
         setFormData(prev => ({
           ...prev,
           employeeId: employeeId,
           department: department
+          // Removed auto-setting hodName here
         }));
-
-        // Auto-fetch HOD name based on department
-        if (department) {
-          const hodName = await fetchHodNameByDepartment(department);
-          setFormData(prev => ({
-            ...prev,
-            hodName: hodName
-          }));
-        }
       }
     } catch (error) {
       console.error('Error fetching employee data:', error);
@@ -946,27 +892,32 @@ return (
                 />
               </div>
 
-              {/* HOD Name (auto-filled) */}
-              <div>
+                <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">HOD Name*</label>
-                <input
-                  type="text"
+                <select
                   name="hodName"
                   value={formData.hodName}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 focus:outline-none"
-                  readOnly
-                />
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                >
+                  <option value="">Select HOD Name</option>
+                  {hodNames.map((name, index) => (
+                    <option key={index} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Substitute dropdown */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Substitute *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Substitute</label>
                 <select
                   name="substitute"
                   value={formData.substitute}
                   onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  required
                 >
                   <option value="">Select Substitute</option>
                   {employees

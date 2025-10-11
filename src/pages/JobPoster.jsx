@@ -1,10 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
+import {ChevronRight, ChevronLeft} from 'lucide-react';
 import { useLocation } from "react-router-dom";
 import html2canvas from "html2canvas";
 import bgImage1 from "../Assets/01.jpg";
 import bgImage2 from "../Assets/02.jpg";
 import bgImage3 from "../Assets/03.jpg";
 import bgImage4 from "../Assets/04.jpg";
+import bgImage5 from "../Assets/05.jpg";
+import bgImage6 from "../Assets/06.jpg";
+import bgImage7 from "../Assets/07.jpg";
+import bgImage8 from "../Assets/08.jpg";
+import bgImage9 from "../Assets/09.jpg";
 
 export default function JobPoster() {
   const location = useLocation();
@@ -87,7 +93,7 @@ const downloadPoster = () => {
 };
 
   // Background images
-  const backgrounds = [bgImage1, bgImage2, bgImage3, bgImage4];
+  const backgrounds = [bgImage1, bgImage2, bgImage3, bgImage4, bgImage5, bgImage6, bgImage7, bgImage8, bgImage9];
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
@@ -171,7 +177,7 @@ const downloadPoster = () => {
             {/* Design 2 */}
             {design === 2 && (
               <>
-                <div className="absolute left-4 top-[174px] text-blue-600 font-extrabold text-3xl drop-shadow-md">
+                <div className="absolute left-4 top-[174px] text-blue-600 font-extrabold text-2xl drop-shadow-md max-w-[60%] break-words leading-[1]">
                   {details.title}
                 </div>
                 <div className="text absolute left-32 top-[228px] text-blue-600 text-sm font-bold">
@@ -195,7 +201,7 @@ const downloadPoster = () => {
             {/* Design 3 */}
             {design === 3 && (
               <>
-                <div className="absolute left-10 top-[212px] text-yellow-300 font-bold text-md uppercase tracking-wide">
+                <div className="absolute left-8 top-[204px] text-yellow-300 text-center font-bold text-md uppercase tracking-wide max-w-[40%] break-words leading-tight">
                   {details.title}
                 </div>
                 <div className="absolute left-28 top-[284px] text-gray-600 text-xs font-bold">
@@ -239,6 +245,124 @@ const downloadPoster = () => {
                 </div>
               </>
             )}
+
+
+            {/* Design 5 */}
+            {design === 5 && (
+              <>
+                <div className="roboto-condensed-text2 absolute left-3 top-[210px] text-black font-bold text-4xl uppercase tracking-wide max-w-[60%] break-words leading-[1.1]">
+                  {details.title}
+                </div>
+                <div className="roboto-condensed-text3 absolute left-28 top-[300px] text-gray-600 text-sm">
+                  {details.qualification}
+                </div>
+                <div className="roboto-condensed-text3 absolute left-28 top-[320px] text-gray-600 text-sm">
+                  {details.experience}
+                </div>
+                <div className="roboto-condensed-text3 absolute left-28 top-[340px] text-gray-600 text-sm">
+                  {details.salary}
+                </div>
+                <div className="roboto-condensed-text3 absolute left-28 top-[360px] text-gray-600 text-sm">
+                  {details.location}
+                </div>
+              </>
+            )}
+
+            {/* Design 6 */}
+            {design === 6 && (
+              <>
+                <div className="text absolute left-10 text-center top-[200px] text-white font-bold text-2xl uppercase tracking-wide max-w-[50%] break-words leading-tight">
+                  {details.title}
+                </div>
+                <div className="text absolute left-40 top-[298px] text-gray-600 text-md">
+                  {details.qualification}
+                </div>
+                <div className="text absolute left-40 top-[326px] text-gray-600 text-md">
+                  {details.experience}
+                </div>
+                <div className="text absolute left-40 top-[352px] text-gray-600 text-md">
+                  {details.salary}
+                </div>
+                <div className="text absolute left-40 top-[375px] text-gray-600 text-md">
+                  {details.location}
+                </div>
+                <div className="text absolute left-28 top-[408px] text-white font-bold text-xl">
+                  {details.note}
+                </div>
+              </>
+            )}
+
+            {/* Design 7 */}
+            {design === 7 && (
+              <>
+                <div className="text absolute left-6 text-center top-[165px] text-black font-bold text-2xl uppercase tracking-wide max-w-[50%] break-words leading-[1.1]">
+                  {details.title}
+                </div>
+                <div className="text absolute left-36 top-[246px] text-gray-600 text-xs">
+                  {details.qualification}
+                </div>
+                <div className="text absolute left-36 top-[264px] text-gray-600 text-xs">
+                  {details.experience}
+                </div>
+                <div className="text absolute left-16 top-[280px] text-gray-600 text-xs">
+                  {details.note}
+                </div>
+                <div className="text absolute left-32 top-[298px] text-gray-600 text-xs">
+                  {details.salary}
+                </div>
+                <div className="text absolute left-32 top-[316px] text-gray-600 text-xs">
+                  {details.location}
+                </div>
+              </>
+            )}
+
+            {/* Design 8 */}
+            {design === 8 && (
+              <>
+                <div className="text absolute left-8 top-[178px] text-center text-[#5A3A2E] font-bold text-2xl uppercase tracking-wide max-w-[50%] break-words leading-[1]">
+                  {details.title}
+                </div>
+                <div className="text absolute left-40 top-[225px] font-bold text-[#5A3A2E] text-sm">
+                  {details.qualification}
+                </div>
+                <div className="text absolute left-36 top-[258px] font-bold text-[#5A3A2E] text-sm">
+                  {details.experience}
+                </div>
+                <div className="text absolute left-28 top-[288px] font-bold text-[#5A3A2E] text-sm">
+                  {details.salary}
+                </div>
+                <div className="text absolute left-32 top-[323px] font-bold text-[#5A3A2E] text-sm">
+                  {details.location}
+                </div>
+                <div className="text absolute left-10 top-[350px] font-bold text-[#5A3A2E] text-xl tracking-wide max-w-[60%] break-words leading-tight">
+                  {details.note}
+                </div>
+              </>
+            )}
+
+            {/* Design 9 */}
+            {design === 9 && (
+              <>
+                <div className="montserrat-text1 absolute left-3 top-[130px] text-center text-[#5A3A2E] font-bold text-3xl uppercase tracking-wide max-w-[60%] break-words leading-[1]">
+                  {details.title}
+                </div>
+                <div className="roboto-condensed-text3 absolute left-8 top-[240px] text-[#5A3A2E] text-sm">
+                  {details.qualification}
+                </div>
+                <div className="roboto-condensed-text3 absolute left-8 top-[275px] text-[#5A3A2E] text-sm">
+                  {details.experience}
+                </div>
+                <div className="roboto-condensed-text3 absolute left-16 top-[337px] text-[#5A3A2E] text-sm">
+                  {details.salary}
+                </div>
+                <div className="roboto-condensed-text3 absolute left-8 top-[311px] text-[#5A3A2E] text-sm">
+                  {details.location}
+                </div>
+                <div className="text absolute left-8 top-[200px] text-[#5A3A2E] text-md tracking-wide max-w-[60%] break-words leading-tight">
+                  {details.note}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Buttons just below the poster */}
@@ -250,10 +374,16 @@ const downloadPoster = () => {
               Download Creative
             </button>
             <button
-              onClick={() => setDesign(design === 4 ? 1 : design + 1)}
+              onClick={() => setDesign(design === 1 ? 9 : design - 1)}
               className="bg-blue-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:bg-blue-500"
             >
-              Change Design
+              <ChevronLeft/>
+            </button>
+            <button
+              onClick={() => setDesign(design === 9 ? 1 : design + 1)}
+              className="bg-blue-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:bg-blue-500"
+            >
+              <ChevronRight/>
             </button>
           </div>
         </div>

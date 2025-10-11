@@ -22,7 +22,8 @@ import {
   ChevronUp,
   NotebookPen,
   BookPlus,
-  Brain
+  Brain,
+  NotepadText
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 
@@ -34,6 +35,7 @@ const Sidebar = ({ onClose }) => {
   const [currentLang, setCurrentLang] = useState('en');
   const [showLanguageHint, setShowLanguageHint] = useState(false);
   const [showLeaveManagement, setShowLeaveManagement] = useState(false);
+  const [showBalancedScoreCard, setShowBalancedScoreCard] = useState(false);
 
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
@@ -45,54 +47,62 @@ const Sidebar = ({ onClose }) => {
 
   // Check if user should see Leave Management
   useEffect(() => {
-    const checkLeaveManagementAccess = async () => {
-      if (!user) return;
+  const checkLeaveManagementAccess = async () => {
+    if (!user) return;
 
-      try {
-        // Fetch employee data to check Column G
-        const response = await fetch(`https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=USER&action=fetch`);
-        const result = await response.json();
+    try {
+      // Fetch employee data to check Column G
+      const response = await fetch(`https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=USER&action=fetch`);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        const employeeData = result.data;
+        const headers = employeeData[0];
         
-        if (result.success && result.data) {
-          const employeeData = result.data;
-          const headers = employeeData[0];
+        // Find column indices
+        const usernameColIndex = headers.findIndex(h => 
+          h.toString().toLowerCase().includes('username') || 
+          h.toString().toLowerCase().includes('name')
+        );
+        const adminColIndex = headers.findIndex(h => 
+          h.toString().toLowerCase().includes('admin')
+        );
+        const leaveManagementColIndex = 6; // Column G (index 6)
+        const hodColIndex = headers.findIndex(h => 
+          h.toString().toLowerCase().includes('hod')
+        );
+        
+        // Find current user in employee data
+        const userRecord = employeeData.find(row => 
+          row[usernameColIndex] === user.Name || 
+          row[usernameColIndex] === user.Username
+        );
+        
+        if (userRecord) {
+          const isAdmin = userRecord[adminColIndex]?.toString().toLowerCase() === 'yes';
+          const hasLeaveAccess = userRecord[leaveManagementColIndex] && 
+                               userRecord[leaveManagementColIndex].toString().trim() !== '';
+          const isHOD = userRecord[hodColIndex]?.toString().toLowerCase() === 'yes';
           
-          // Find column indices
-          const usernameColIndex = headers.findIndex(h => 
-            h.toString().toLowerCase().includes('username') || 
-            h.toString().toLowerCase().includes('name')
-          );
-          const adminColIndex = headers.findIndex(h => 
-            h.toString().toLowerCase().includes('admin')
-          );
-          const leaveManagementColIndex = 6; // Column G (index 6)
+          // Show Leave Management if:
+          // 1. User is NOT admin AND Column G has value
+          // 2. OR user is admin (admins always see it)
+          setShowLeaveManagement(isAdmin || (!isAdmin && hasLeaveAccess));
           
-          // Find current user in employee data
-          const userRecord = employeeData.find(row => 
-            row[usernameColIndex] === user.Name || 
-            row[usernameColIndex] === user.Username
-          );
-          
-          if (userRecord) {
-            const isAdmin = userRecord[adminColIndex]?.toString().toLowerCase() === 'yes';
-            const hasLeaveAccess = userRecord[leaveManagementColIndex] && 
-                                 userRecord[leaveManagementColIndex].toString().trim() !== '';
-            
-            // Show Leave Management if:
-            // 1. User is NOT admin AND Column G has value
-            // 2. OR user is admin (admins always see it)
-            setShowLeaveManagement(isAdmin || (!isAdmin && hasLeaveAccess));
-          }
+          // Show Balanced Score Card only for HOD
+          setShowBalancedScoreCard(isHOD);
         }
-      } catch (error) {
-        console.error('Error checking leave management access:', error);
-        // Default to showing for admins, hiding for others if fetch fails
-        setShowLeaveManagement(user?.Admin === 'Yes');
       }
-    };
+    } catch (error) {
+      console.error('Error checking leave management access:', error);
+      // Default to showing for admins, hiding for others if fetch fails
+      setShowLeaveManagement(user?.Admin === 'Yes');
+      setShowBalancedScoreCard(false);
+    }
+  };
 
-    checkLeaveManagementAccess();
-  }, [user]);
+  checkLeaveManagementAccess();
+}, [user]);
 
   useEffect(() => {
     const hasSeenLanguageHint = localStorage.getItem('hasSeenLanguageHint');
@@ -121,6 +131,7 @@ const Sidebar = ({ onClose }) => {
     { path: '/leave-management', icon: BookPlus, label: 'Leave Management' },
     { path: '/misreport', icon: AlarmClockCheck, label: 'Balanced Score Card' },
     { path: '/jobPoster', icon: Brain, label: 'Creative' },
+    { path: '/hrPolicy', icon: NotepadText, label: 'HR Policy' },
     { path: '/license', icon: AlarmClockCheck, label: 'License' },
   ];
 
@@ -128,6 +139,7 @@ const Sidebar = ({ onClose }) => {
     { path: '/my-profile', icon: ProfileIcon, label: 'My Profile' },
     { path: '/leave-request', icon: LeaveIcon, label: 'Leave Request' },
     ...(showLeaveManagement ? [{ path: '/leaveApproval', icon: BookPlus, label: 'Leave Approval' }] : []),
+    ...(showBalancedScoreCard ? [{ path: '/misreport', icon: AlarmClockCheck, label: 'Balanced Score Card' }] : []),
     { path: '/company-calendar', icon: Calendar, label: 'Company Calendar' },
     { path: '/license', icon: Copyright, label: 'License' },
   ];
@@ -141,7 +153,7 @@ const Sidebar = ({ onClose }) => {
         {!isCollapsed && (
           <h1 className="text-xl font-bold flex items-center gap-2 text-white">
             <Users size={24} />
-            <span>HR FMS</span>
+            <span>HRMS</span>
             {user?.role === 'employee' && (
               <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">Employee</span>
             )}

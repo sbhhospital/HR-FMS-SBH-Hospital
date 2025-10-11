@@ -138,48 +138,6 @@ const leaveStats = calculateLeaveStats();
   ]),
 ].filter(name => name && name !== "all");
 
-  const fetchHodNameByDepartment = async (department) => {
-  if (!department) return "";
-  
-  try {
-    const response = await fetch(
-      "https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=USER&action=fetch"
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-
-    if (!result.success) {
-      throw new Error(result.error || "Failed to fetch USER data");
-    }
-
-    const rawData = result.data || result;
-
-    if (!Array.isArray(rawData)) {
-      throw new Error("Expected array data not received");
-    }
-
-    // USER sheet structure:
-    // Column F (index 5) - Department
-    // Column G (index 6) - HOD Status (Yes/No)
-    // Column A (index 0) - Name
-    const hodData = rawData
-      .slice(1) // Skip header row
-      .find(row => 
-        row[5]?.toString().trim().toLowerCase() === department.toLowerCase() && 
-        row[6]?.toString().trim().toLowerCase() === "yes"
-      );
-
-    return hodData ? hodData[2]?.toString().trim() : ""; // Return name from Column A
-  } catch (error) {
-    console.error("Error fetching HOD data:", error);
-    return "";
-  }
-};
-
   const fetchHodNames = async () => {
     try {
       const response = await fetch(
@@ -303,19 +261,16 @@ const handleCheckboxChange = (leaveId, rowData) => {
 };
 
 // Handle employee selection
-const handleEmployeeChange = async (selectedName) => {
+const handleEmployeeChange = (selectedName) => {
   const selectedEmployee = employees.find((emp) => emp.name === selectedName);
   
   if (selectedEmployee) {
-    // Fetch HOD name based on department
-    const hodName = await fetchHodNameByDepartment(selectedEmployee.department);
-    
     setFormData((prev) => ({
       ...prev,
       employeeName: selectedName,
       employeeId: selectedEmployee.id,
       department: selectedEmployee.department, // Set department
-      hodName: hodName, // Auto-fill HOD name
+      hodName: "", // Reset HOD name when employee changes
     }));
   } else {
     setFormData((prev) => ({
@@ -330,17 +285,17 @@ const handleEmployeeChange = async (selectedName) => {
 
   // Handle form input changes
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+  const { name, value } = e.target;
 
-    if (name === "employeeName") {
-      handleEmployeeChange(value);
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-  };
+  if (name === "employeeName") {
+    handleEmployeeChange(value);
+  } else {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
+};
 
   // Calculate days between dates
   const calculateDays = (startDateStr, endDateStr) => {
@@ -1407,31 +1362,37 @@ const filteredRejectedLeaves = rejectedLeaves.filter((item) => {
     />
   </div>
 
-  {/* HOD Name (auto-filled) */}
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      HOD Name
-    </label>
-    <input
-      type="text"
-      name="hodName"
-      value={formData.hodName}
-      className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 focus:outline-none"
-      readOnly
-    />
-  </div>
+  {/* HOD Name dropdown */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    HOD Name *
+  </label>
+  <select
+    name="hodName"
+    value={formData.hodName}
+    onChange={handleInputChange}
+    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+    required
+  >
+    <option value="">Select HOD</option>
+    {hodNames.map((name, index) => (
+      <option key={index} value={name}>
+        {name}
+      </option>
+    ))}
+  </select>
+</div>
 
   {/* New Substitute dropdown */}
   <div>
     <label className="block text-sm font-medium text-gray-700 mb-1">
-      Substitute *
+      Substitute
     </label>
     <select
       name="substitute"
       value={formData.substitute}
       onChange={handleInputChange}
       className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-      required
     >
       <option value="">Select Substitute</option>
       {employees

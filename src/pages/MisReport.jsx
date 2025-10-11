@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 
 const MisReport = () => {
   const [peopleData, setPeopleData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [historyData, setHistoryData] = useState([]); // New state for history data
 
   useEffect(() => {
     fetchData();
@@ -12,7 +15,7 @@ const MisReport = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=MIS&action=fetch');
+      const response = await fetch('https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=MIS Scorecard&action=fetch');
       
       if (!response.ok) {
         throw new Error('Failed to fetch data');
@@ -24,6 +27,7 @@ const MisReport = () => {
         // Process the data from the sheet
         const processedData = processSheetData(data.data);
         setPeopleData(processedData);
+        setFilteredData(processedData);
       } else {
         throw new Error(data.error || 'Failed to fetch data from sheet');
       }
@@ -35,55 +39,95 @@ const MisReport = () => {
     }
   };
 
+  // New function to fetch history data
+  const fetchHistoryData = async (employeeName) => {
+    try {
+      setLoading(true);
+      const response = await fetch('https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec?sheet=MIS Scorecard History&action=fetch');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch history data');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Process the history data and filter by employee name
+        const processedHistoryData = processHistoryData(data.data, employeeName);
+        setHistoryData(processedHistoryData);
+        setFilteredData(processedHistoryData);
+      } else {
+        throw new Error(data.error || 'Failed to fetch history data from sheet');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching history data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const processSheetData = (sheetData) => {
     if (!sheetData || sheetData.length < 2) return [];
     
-    const headers = sheetData[0];
     const rows = sheetData.slice(1);
     
-    // Map column letters to indices
-    const columnMap = {};
-    headers.forEach((header, index) => {
-      columnMap[header.trim()] = index;
-    });
-    
     return rows.map((row, index) => {
-      // Get values from each column
-      const dateStart = row[columnMap['Date Start']] || '';
-      const dateEnd = row[columnMap['Date End']] || '';
-      const name = row[columnMap['Name']] || '';
-      const target = row[columnMap['Target']] || '';
-      const actualWorkDone = row[columnMap['Actual  Work Done']] || '';
-      const weeklyWorkDone = row[columnMap['Weekly Work Done %']] || '';
-      const weeklyWorkDoneOnTime = row[columnMap['Weekly Work Done On Time %']] || '';
-      const totalWorkDone = parseInt(row[columnMap['Total Work Done']]) || 0;
-      const weekPending = row[columnMap['Week Pending']] || '';
-      const allPendingTillDate = row[columnMap['All Pending Till Date']] || '';
-      
-      // Generate avatar based on name
-      const avatar = name && name.trim() !== '' ? 
-        (name.split(' ').length > 1 ? 
-          `${name.split(' ')[0][0]}${name.split(' ')[1][0]}`.toUpperCase() : 
-          name[0].toUpperCase()) : 
-        '👤';
-
-        
-      
       return {
         id: index + 1,
-        name,
-        dateStart,
-        dateEnd,
-        target,
-        actualWorkDone,
-        weeklyWorkDone,
-        weeklyWorkDoneOnTime,
-        totalWorkDone,
-        weekPending,
-        allPendingTillDate,
-        avatar
+        name: row[2] || '', // Column C (index-2) for Name
+        dateStart: row[0] || '', // Column A (index-0) for Date Start
+        dateEnd: row[1] || '', // Column B (index-1) for Date End
+        target: row[3] || '', // Column D (index-3) for Target
+        actualWeekDone: row[4] || '', // Column E (index-4) for Actual Week Done
+        actualWorkDoneOnTime: row[5] || '', // Column F (index-5) for Actual Work Done On Time
+        workNotDoneOnTime: row[6] || '', // Column G (index-6) for Work Not Done On Time
+        workDoneOnTime: parseInt(row[7]) || 0, // Column H (index-7) for Work Done On Time %
+        workNotDone: row[8] || '', // Column I (index-8) for Work Not Done
+        workNotDonePercent: row[9] || '', // Column J (index-9) for % Work Not Done
+        overallDone: row[10] || '', // Column K (index-10) for % Overalls Done
       };
     });
+  };
+
+  // New function to process history data
+  const processHistoryData = (sheetData, employeeName) => {
+    if (!sheetData || sheetData.length < 2) return [];
+    
+    const rows = sheetData.slice(1);
+    
+    // Filter rows by employee name and process
+    const filteredHistory = rows
+      .filter(row => row[2] === employeeName) // Column C (index-2) for Name
+      .map((row, index) => {
+        return {
+          id: index + 1,
+          name: row[2] || '', // Column C (index-2) for Name
+          dateStart: row[0] || '', // Column A (index-0) for Date Start
+          dateEnd: row[1] || '', // Column B (index-1) for Date End
+          target: row[3] || '', // Column D (index-3) for Target
+          actualWeekDone: row[4] || '', // Column E (index-4) for Actual Week Done
+          actualWorkDoneOnTime: row[5] || '', // Column F (index-5) for Actual Work Done On Time
+          workNotDoneOnTime: row[6] || '', // Column G (index-6) for Work Not Done On Time
+          workDoneOnTime: parseInt(row[7]) || 0, // Column H (index-7) for Work Done On Time %
+          workNotDone: row[8] || '', // Column I (index-8) for Work Not Done
+          workNotDonePercent: row[9] || '', // Column J (index-9) for % Work Not Done
+          overallDone: row[10] || '', // Column K (index-10) for % Overalls Done
+        };
+      });
+    
+    return filteredHistory;
+  };
+
+  const handleEmployeeClick = async (employeeName) => {
+    setSelectedEmployee(employeeName);
+    await fetchHistoryData(employeeName);
+  };
+
+  const handleBackClick = () => {
+    setSelectedEmployee(null);
+    setFilteredData(peopleData);
+    setHistoryData([]); // Clear history data when going back
   };
 
   const TotalDoneWork = ({ weeks }) => {
@@ -133,9 +177,29 @@ const MisReport = () => {
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 z-10 py-2">
-          <h1 className="text-2xl font-bold text-gray-900">MIS Report</h1>
+          <div className="flex items-center">
+            {selectedEmployee && (
+              <button 
+                onClick={handleBackClick}
+                className="mr-4 px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back
+              </button>
+            )}
+            <h1 className="text-2xl font-bold text-gray-900">
+              {selectedEmployee ? `${selectedEmployee}'s Score Card` : 'Balanced Score Card'}
+            </h1>
+            {selectedEmployee && (
+              <span className="ml-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                History View
+              </span>
+            )}
+          </div>
           <button 
-            onClick={fetchData}
+            onClick={selectedEmployee ? () => fetchHistoryData(selectedEmployee) : fetchData}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center"
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -154,27 +218,34 @@ const MisReport = () => {
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">DATE START</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">DATE END</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">TARGET</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">ACTUAL WORK DONE</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">WEEKLY WORK DONE %</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">WEEKLY WORK DONE ON TIME %</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">TOTAL WORK DONE</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">WEEK PENDING</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">ALL PENDING TILL DATE</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">Actual Week Done</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">Actual  Work Done  On Time</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">WORK Not Done On Time</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">Work Done On Time %</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">Work Not Done</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">Work Not Done %</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">Overall Done %</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {peopleData.length > 0 ? (
-                  peopleData.map((person, index) => (
+                {filteredData.length > 0 ? (
+                  filteredData.map((person, index) => (
                     <tr key={person.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-lg">
-                              {person.avatar}
-                            </div>
-                          </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{person.name}</div>
+                            {!selectedEmployee ? (
+                              <button
+                                onClick={() => handleEmployeeClick(person.name)}
+                                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline focus:outline-none"
+                              >
+                                {person.name}
+                              </button>
+                            ) : (
+                              <span className="text-sm font-medium text-gray-900">
+                                {person.name}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -182,28 +253,31 @@ const MisReport = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{person.dateEnd}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{person.target}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {person.actualWorkDone}
+                        {person.actualWeekDone}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {person.weeklyWorkDone}
+                        {person.actualWorkDoneOnTime}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {person.weeklyWorkDoneOnTime}
+                        {person.workNotDoneOnTime}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <TotalDoneWork weeks={person.totalWorkDone} />
+                        {person.workDoneOnTime}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {person.weekPending}
+                        {person.workNotDone}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {person.allPendingTillDate}
+                        {person.workNotDonePercent}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {person.overallDone}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="12" className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan="11" className="px-6 py-4 text-center text-gray-500">
                       No data available
                     </td>
                   </tr>

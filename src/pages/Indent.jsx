@@ -26,6 +26,96 @@ const Indent = () => {
   const [tableLoading, setTableLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [departments, setDepartments] = useState([]);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [selectedRow, setSelectedRow] = useState(null);
+  const [emailData, setEmailData] = useState({
+  recipientName: "",
+  recipientEmail: "",
+  subject: "",
+  message: "",
+  });
+
+  const handleShareClick = (item) => {
+  setSelectedRow(item);
+  
+  // Create a formatted message with row details
+  const formattedMessage = `
+Indent Details:
+
+Indent Number: ${item.indentNumber}
+Post: ${item.post}
+Gender: ${item.gender}
+Department: ${item.department}
+Prefer: ${item.prefer}
+Experience: ${item.experience || 'N/A'}
+Number of Posts: ${item.noOfPost}
+Completion Date: ${item.completionDate}
+Social Site: ${item.socialSite}
+Social Site Types: ${item.socialSiteTypes || 'N/A'}
+
+This indent requires your attention.
+  `.trim();
+
+  setEmailData({
+    recipientName: '',
+    recipientEmail: '',
+    subject: ``,
+    message: formattedMessage
+  });
+  setShowEmailModal(true);
+};
+
+const handleEmailSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (!emailData.recipientEmail || !emailData.subject || !emailData.message) {
+    toast.error('Please fill all required fields');
+    return;
+  }
+
+  try {
+    setSubmitting(true);
+    
+    const response = await fetch('https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec', {
+      method: 'POST',
+      body: new URLSearchParams({
+        action: 'shareViaEmail',
+        recipientEmail: emailData.recipientEmail,
+        subject: emailData.subject,
+        message: emailData.message,
+        documents: JSON.stringify([]) // You can add documents if needed
+      }),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      toast.success('Email sent successfully!');
+      setShowEmailModal(false);
+      setEmailData({
+        recipientName: '',
+        recipientEmail: '',
+        subject: '',
+        message: ''
+      });
+    } else {
+      toast.error('Failed to send email: ' + (result.error || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error('Email send error:', error);
+    toast.error('Failed to send email!');
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+const handleEmailInputChange = (e) => {
+  const { name, value } = e.target;
+  setEmailData(prev => ({
+    ...prev,
+    [name]: value
+  }));
+};
 
   const fetchDepartments = async () => {
   try {
@@ -691,6 +781,128 @@ const fetchLastIndentNumber = async () => {
         </div>
       )}
 
+      {showEmailModal && (
+        <div className="fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+              <h3 className="text-lg font-medium text-gray-800">
+                Share Indent via Email
+              </h3>
+              <button
+                onClick={() => setShowEmailModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleEmailSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Recipient Name
+                </label>
+                <input
+                  type="text"
+                  name="recipientName"
+                  value={emailData.recipientName}
+                  onChange={handleEmailInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Enter recipient name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  name="recipientEmail"
+                  value={emailData.recipientEmail}
+                  onChange={handleEmailInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Enter email address"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Subject *
+                </label>
+                <input
+                  type="text"
+                  name="subject"
+                  value={emailData.subject}
+                  onChange={handleEmailInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Enter subject"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Message *
+                </label>
+                <textarea
+                  name="message"
+                  value={emailData.message}
+                  onChange={handleEmailInputChange}
+                  rows="6"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-vertical"
+                  placeholder="Enter your message"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEmailModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-all duration-200"
+                  disabled={submitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-all duration-200 flex items-center justify-center"
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Email"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Info Card */}
       <div className="bg-white rounded-xl shadow-lg border p-6">
         <h2 className="text-lg font-bold text-gray-800 mb-4">
@@ -709,7 +921,7 @@ const fetchLastIndentNumber = async () => {
                     Indent Number
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Creative
+                    Action
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Post
@@ -765,12 +977,20 @@ const fetchLastIndentNumber = async () => {
                         {item.indentNumber}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => handleCreativeClick(item)}
-                          className="bg-blue-600 px-4 py-1 rounded-md text-white hover:bg-blue-700 transition-colors"
-                        >
-                          Creative
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleCreativeClick(item)}
+                            className="bg-blue-600 px-4 py-2 rounded-md text-white hover:bg-blue-700 transition-colors min-w-[80px]"
+                          >
+                            Creative
+                          </button>
+                          <button
+                            onClick={() => handleShareClick(item)}
+                            className="bg-green-600 px-4 py-2 rounded-md text-white hover:bg-green-700 transition-colors min-w-[80px]"
+                          >
+                            Share
+                          </button>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {item.post}

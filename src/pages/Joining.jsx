@@ -1077,7 +1077,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Father Name
+                    Father/Husband Name
                   </label>
                   <input
                     type="text"
