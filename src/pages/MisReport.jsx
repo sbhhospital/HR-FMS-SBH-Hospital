@@ -11,14 +11,57 @@ const MisReport = () => {
   const [showEmailPopup, setShowEmailPopup] = useState(false);
   const [showPIPPage, setShowPIPPage] = useState(false);
   const [pipActionLoading, setPipActionLoading] = useState({});
+  const [isNewPIPRecord, setIsNewPIPRecord] = useState(false);
   const [pipData, setPipData] = useState([]);
   const [emailForm, setEmailForm] = useState({
     recipientName: '',
     recipientEmail: '',
     subject: '',
-    message: ''
+    message: '',
+    startDate: '',
+    endDate: '',
+    totalDays: 0
   });
-  const [employeeEmails, setEmployeeEmails] = useState({}); // Store email mappings
+  const [employeeEmails, setEmployeeEmails] = useState({});
+  const [showExtendPopup, setShowExtendPopup] = useState(false); 
+  const [selectedPIPRecord, setSelectedPIPRecord] = useState(null);
+  const [extendForm, setExtendForm] = useState({
+  startDate: "",
+  endDate: "",
+  totalDays: 0,
+  });
+
+  const handleExtendClick = (record) => {
+  setSelectedPIPRecord(record);
+  setExtendForm({
+    startDate: record.startDate || '',
+    endDate: record.endDate || '',
+    totalDays: record.totalDays || 0
+  });
+  setShowExtendPopup(true);
+};
+
+const handleExtendFormChange = (field, value) => {
+  if (field === 'startDate' || field === 'endDate') {
+    const updatedForm = {
+      ...extendForm,
+      [field]: value
+    };
+    
+    // Calculate total days if both dates are selected
+    if (updatedForm.startDate && updatedForm.endDate) {
+      const start = new Date(updatedForm.startDate);
+      const end = new Date(updatedForm.endDate);
+      const timeDiff = end.getTime() - start.getTime();
+      const dayDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+      updatedForm.totalDays = dayDiff > 0 ? dayDiff : 0;
+    } else {
+      updatedForm.totalDays = 0;
+    }
+    
+    setExtendForm(updatedForm);
+  }
+};
 
   useEffect(() => {
     fetchData();
@@ -160,7 +203,7 @@ const MisReport = () => {
         workDoneOnTime: parseInt(row[7]) || 0,
         workNotDone: row[8] || '',
         workNotDonePercent: row[9] || '',
-        overallDone: parseFloat(row[10]) || 0,
+        overallDone: (row[10]) || 0,
       };
     });
   };
@@ -198,36 +241,101 @@ const MisReport = () => {
   };
 
 const processPIPData = (sheetData) => {
-  if (!sheetData || sheetData.length < 2) return [];
-  
-  const rows = sheetData.slice(1);
-  
-  return rows.map((row, index) => {
-    return {
-      id: index + 1,
-      timestamp: row[0] || '',
-      employeeName: row[1] || '',
-      latestScore: row[2] || '',
-      monthlyAverage: row[3] || '',
-      status: row[4] || '',           // Column E (index 4) - status
-      email: row[5] || '',           // Column F (index 5) - email
-      emailContent: row[6] || '',    // Column G (index 6) - email content
-    };
-  });
-};
+    if (!sheetData || sheetData.length < 2) return [];
+    
+    const rows = sheetData.slice(1);
+    
+    return rows.map((row, index) => {
+      return {
+        id: index + 1,
+        timestamp: row[0] || '',
+        employeeName: row[1] || '',
+        latestScore: row[2] || '',
+        monthlyAverage: row[3] || '',
+        status: row[4] || '',           // Column E (index 4) - status
+        email: row[5] || '',            // Column F (index 5) - email
+        emailContent: row[6] || '',     // Column G (index 6) - email content
+        startDate: row[7] || '',        // Column H (index 7) - start date
+        endDate: row[8] || '',          // Column I (index 8) - end date
+        totalDays: row[9] || 0,         // Column J (index 9) - total days
+      };
+    });
+  };
 
 // Add this function to handle status updates
-const updatePIPStatus = async (recordId, employeeName, newStatus, buttonType) => {
+const updatePIPStatus = async (recordId, employeeName, newStatus, buttonType, extendData = null) => {
   // Set loading state for this specific record and button
   setPipActionLoading(prev => ({ ...prev, [`${recordId}-${buttonType}`]: true }));
   
   try {
+    let success = true;
+    
+    // If it's an extend action and we have extend data, update the dates first
+    if (buttonType === 'extend' && extendData) {
+      const dateFormData = new URLSearchParams();
+      dateFormData.append('action', 'updateCell');
+      dateFormData.append('sheetName', 'PIP');
+      dateFormData.append('rowIndex', recordId + 1);
+      
+      // Update start date (Column H - index 7)
+      dateFormData.append('columnIndex', '8');
+      dateFormData.append('value', extendData.startDate);
+      
+      const dateResponse = await fetch(
+        'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec',
+        {
+          method: 'POST',
+          body: dateFormData
+        }
+      );
+      
+      const dateResult = await dateResponse.json();
+      if (!dateResult.success) {
+        throw new Error(dateResult.error || 'Failed to update start date');
+      }
+      
+      // Update end date (Column I - index 8)
+      dateFormData.set('columnIndex', '9');
+      dateFormData.set('value', extendData.endDate);
+      
+      const endDateResponse = await fetch(
+        'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec',
+        {
+          method: 'POST',
+          body: dateFormData
+        }
+      );
+      
+      const endDateResult = await endDateResponse.json();
+      if (!endDateResult.success) {
+        throw new Error(endDateResult.error || 'Failed to update end date');
+      }
+      
+      // Update total days (Column J - index 9)
+      dateFormData.set('columnIndex', '10');
+      dateFormData.set('value', extendData.totalDays.toString());
+      
+      const daysResponse = await fetch(
+        'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec',
+        {
+          method: 'POST',
+          body: dateFormData
+        }
+      );
+      
+      const daysResult = await daysResponse.json();
+      if (!daysResult.success) {
+        throw new Error(daysResult.error || 'Failed to update total days');
+      }
+    }
+    
+    // Update status (Column E - index 4)
     const formData = new URLSearchParams();
-    formData.append('action', 'updateCell');
-    formData.append('sheetName', 'PIP');
-    formData.append('rowIndex', recordId + 1);
-    formData.append('columnIndex', '5');
-    formData.append('value', newStatus);
+formData.append('action', 'updateCell');
+formData.append('sheetName', 'PIP');
+formData.append('rowIndex', recordId + 1);
+formData.append('columnIndex', '5'); // Column E in Sheets (1-based)
+formData.append('value', newStatus);
 
     const response = await fetch(
       'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec',
@@ -253,6 +361,48 @@ const updatePIPStatus = async (recordId, employeeName, newStatus, buttonType) =>
     setPipActionLoading(prev => ({ ...prev, [`${recordId}-${buttonType}`]: false }));
   }
 };
+
+// Add this function to handle extend submission
+const handleExtendSubmit = async () => {
+  if (!extendForm.startDate || !extendForm.endDate) {
+    alert('Please select both start and end dates');
+    return;
+  }
+
+  if (extendForm.totalDays <= 0) {
+    alert('Please select valid dates');
+    return;
+  }
+
+  // Set loading state for the extend submit button
+  setPipActionLoading(prev => ({ ...prev, 'extend-submit': true }));
+
+  const success = await updatePIPStatus(
+    selectedPIPRecord.id,
+    selectedPIPRecord.employeeName,
+    "Extended",
+    "extend",
+    {
+      startDate: extendForm.startDate,
+      endDate: extendForm.endDate,
+      totalDays: extendForm.totalDays
+    }
+  );
+
+  // Clear loading state
+  setPipActionLoading(prev => ({ ...prev, 'extend-submit': false }));
+
+  if (success) {
+    setShowExtendPopup(false);
+    setSelectedPIPRecord(null);
+    setExtendForm({
+      startDate: '',
+      endDate: '',
+      totalDays: 0
+    });
+  }
+};
+
 
   const parseDate = (dateStr) => {
     if (!dateStr) return new Date(0);
@@ -288,49 +438,51 @@ const updatePIPStatus = async (recordId, employeeName, newStatus, buttonType) =>
   };
 
 const storePIPRecord = async (employeeName, latestScore, monthlyAverage, recipientEmail, emailContent) => {
-  try {
-    const timestamp = new Date().toLocaleString('en-GB'); // DD/MM/YYYY, HH:MM:SS format
-    const status = 'Pending';
-    
-    // Updated row data with email in column F (index 5) and emailContent in column G (index 6)
-    const rowData = [
-      timestamp,
-      employeeName,
-      latestScore,
-      monthlyAverage,
-      status,
-      recipientEmail,    // Column F (index 5) - recipient email
-      emailContent       // Column G (index 6) - email content
-    ];
+    try {
+      const timestamp = new Date().toLocaleString('en-GB'); // DD/MM/YYYY, HH:MM:SS format
+      const status = 'Pending';
+      
+      // Updated row data with additional columns for dates
+      const rowData = [
+        timestamp,
+        employeeName,
+        latestScore,
+        monthlyAverage,
+        status,
+        recipientEmail,           // Column F (index 5) - recipient email
+        emailContent,             // Column G (index 6) - email content
+        emailForm.startDate,      // Column H (index 7) - start date
+        emailForm.endDate,        // Column I (index 8) - end date
+        emailForm.totalDays       // Column J (index 9) - total days
+      ];
 
-    const formData = new URLSearchParams();
-    formData.append('action', 'insert');
-    formData.append('sheetName', 'PIP');
-    formData.append('rowData', JSON.stringify(rowData));
+      const formData = new URLSearchParams();
+      formData.append('action', 'insert');
+      formData.append('sheetName', 'PIP');
+      formData.append('rowData', JSON.stringify(rowData));
 
-    const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec',
-      {
-        method: 'POST',
-        body: formData
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec',
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to store PIP record');
       }
-    );
-
-    const result = await response.json();
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to store PIP record');
+      
+      return true;
+    } catch (error) {
+      console.error('Error storing PIP record:', error);
+      return false;
     }
-    
-    return true;
-  } catch (error) {
-    console.error('Error storing PIP record:', error);
-    return false;
-  }
-};
+  };
 
-  const handleSharePIP = async (employeeName) => {
-  // Prevent multiple submissions
+const handleSharePIP = async (employeeName) => {
   if (showEmailPopup) return;
   
   // Find employee data to get their performance details
@@ -365,83 +517,121 @@ Management Team`;
     recipientName: employeeName,
     recipientEmail: employeeEmail, // Auto-filled with employee's email
     subject: `Performance Review - ${employeeName}`,
-    message: emailContent
+    message: emailContent,
+    startDate: '',
+    endDate: '',
+    totalDays: 0
   });
   
-  // Store the PIP record first - but only if not already stored recently
-  const storeSuccess = await storePIPRecord(
-    employeeName,
-    latestRecord?.overallDone || 0,
-    monthlyAverage,
-    employeeEmail, // Store email in column F (index 5)
-    emailContent   // Store email content in column G (index 6)
-  );
-  
-  if (storeSuccess) {
-    setShowEmailPopup(true);
-  } else {
-    alert('Failed to store performance record. Please try again.');
-  }
+  // Set flag to indicate this is a new PIP record that should be stored when email is sent
+  setIsNewPIPRecord(true);
+  setShowEmailPopup(true);
 };
 
   const handleEmailFormChange = (field, value) => {
-    setEmailForm(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSendEmail = async () => {
-    // Validate email form
-    if (!emailForm.recipientEmail || !emailForm.subject || !emailForm.message) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    try {
-      setLoading(true);
+    if (field === 'startDate' || field === 'endDate') {
+      const updatedForm = {
+        ...emailForm,
+        [field]: value
+      };
       
-      // Prepare scorecard data
-      const scorecardData = filteredData.slice(0, 3).map(record => ({
-        dateStart: record.dateStart,
-        dateEnd: record.dateEnd,
-        target: record.target,
-        overallDone: record.overallDone
-      }));
-
-      const formData = new URLSearchParams();
-      formData.append('action', 'shareViaEmail');
-      formData.append('recipientEmail', emailForm.recipientEmail);
-      formData.append('subject', emailForm.subject);
-      formData.append('message', emailForm.message);
-      formData.append('documents', JSON.stringify(scorecardData));
-
-      const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec',
-        {
-          method: 'POST',
-          body: formData
-        }
-      );
-
-      const result = await response.json();
-
-      if (result.success) {
-        alert('Email sent successfully!');
-        setShowEmailPopup(false);
-        setEmailForm({
-          recipientName: '',
-          recipientEmail: '',
-          subject: '',
-          message: ''
-        });
+      // Calculate total days if both dates are selected
+      if (updatedForm.startDate && updatedForm.endDate) {
+        const start = new Date(updatedForm.startDate);
+        const end = new Date(updatedForm.endDate);
+        const timeDiff = end.getTime() - start.getTime();
+        const dayDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1; // +1 to include both start and end dates
+        updatedForm.totalDays = dayDiff > 0 ? dayDiff : 0;
       } else {
-        throw new Error(result.error || 'Failed to send email');
+        updatedForm.totalDays = 0;
       }
-    } catch (error) {
-      console.error('Error sending email:', error);
-      alert('Failed to send email: ' + error.message);
-    } finally {
-      setLoading(false);
+      
+      setEmailForm(updatedForm);
+    } else {
+      setEmailForm(prev => ({ ...prev, [field]: value }));
     }
   };
+
+const handleSendEmail = async () => {
+  // Validate email form
+  if (!emailForm.recipientEmail || !emailForm.subject || !emailForm.message) {
+    alert('Please fill in all required fields');
+    return;
+  }
+
+  try {
+    setLoading(true);
+    
+    // Store PIP record only when sending email (if it's a new record)
+    if (isNewPIPRecord) {
+      const employeeRecords = filteredData.slice(0, 3);
+      const latestRecord = employeeRecords[0];
+      const monthlyAverage = calculateMonthlyAverage();
+      
+      const storeSuccess = await storePIPRecord(
+        emailForm.recipientName,
+        latestRecord?.overallDone || 0,
+        monthlyAverage,
+        emailForm.recipientEmail,
+        emailForm.message // Use the actual message that was sent
+      );
+      
+      if (!storeSuccess) {
+        alert('Failed to store performance record. Email was not sent.');
+        return;
+      }
+      
+      // Reset the flag after successful storage
+      setIsNewPIPRecord(false);
+    }
+    
+    // Prepare scorecard data
+    const scorecardData = filteredData.slice(0, 3).map(record => ({
+      dateStart: record.dateStart,
+      dateEnd: record.dateEnd,
+      target: record.target,
+      overallDone: record.overallDone
+    }));
+
+    const formData = new URLSearchParams();
+    formData.append('action', 'shareViaEmail');
+    formData.append('recipientEmail', emailForm.recipientEmail);
+    formData.append('subject', emailForm.subject);
+    formData.append('message', emailForm.message);
+    formData.append('documents', JSON.stringify(scorecardData));
+
+    const response = await fetch(
+      'https://script.google.com/macros/s/AKfycbxmXLxCqjFY9yRDLoYEjqU9LTcpfV7r9ueBuOsDsREkdGknbdE_CZBW7ZHTdP3n0NzOfQ/exec',
+      {
+        method: 'POST',
+        body: formData
+      }
+    );
+
+    const result = await response.json();
+
+    if (result.success) {
+      alert('Email sent successfully!');
+      setShowEmailPopup(false);
+      setEmailForm({
+        recipientName: '',
+        recipientEmail: '',
+        subject: '',
+        message: '',
+        startDate: '',
+        endDate: '',
+        totalDays: 0
+      });
+    } else {
+      throw new Error(result.error || 'Failed to send email');
+    }
+  } catch (error) {
+    console.error('Error sending email:', error);
+    alert('Failed to send email: ' + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const calculateMonthlyAverage = () => {
     if (filteredData.length === 0) return 0;
@@ -578,6 +768,15 @@ Management Team`;
                       Email
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">
+                      Start Date
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">
+                      End Date
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">
+                      Total Days
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">
                       Email Content
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">
@@ -588,7 +787,7 @@ Management Team`;
                 <tbody className="bg-white divide-y divide-gray-200">
                   {pipData.length > 0 ? (
                     pipData
-                      .filter((record) => record.status !== "Done") // Hide records with "Done" status
+                      .filter((record) => record.status !== "Done")
                       .map((record, index) => (
                         <tr
                           key={record.id}
@@ -626,6 +825,15 @@ Management Team`;
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {record.email}
                           </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {record.startDate}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {record.endDate}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {record.totalDays}
+                          </td>
                           <td className="px-6 py-4 text-sm text-gray-500">
                             <div
                               className="max-w-md truncate"
@@ -637,17 +845,9 @@ Management Team`;
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div className="flex space-x-2">
                               <button
-                                onClick={() =>
-                                  updatePIPStatus(
-                                    record.id,
-                                    record.employeeName,
-                                    "Extended",
-                                    "extend" // Add button type identifier
-                                  )
-                                }
+                                onClick={() => handleExtendClick(record)}
                                 disabled={
-                                  pipActionLoading[`${record.id}-extend`] ||
-                                  pipActionLoading[`${record.id}-done`]
+                                  pipActionLoading[`${record.id}-extend`]
                                 }
                                 className="px-3 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs flex items-center justify-center min-w-[60px] disabled:opacity-50 disabled:cursor-not-allowed"
                               >
@@ -663,13 +863,10 @@ Management Team`;
                                     record.id,
                                     record.employeeName,
                                     "Done",
-                                    "done" // Add button type identifier
+                                    "done"
                                   )
                                 }
-                                disabled={
-                                  pipActionLoading[`${record.id}-done`] ||
-                                  pipActionLoading[`${record.id}-extend`]
-                                }
+                                disabled={pipActionLoading[`${record.id}-done`]}
                                 className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs flex items-center justify-center min-w-[60px] disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 {pipActionLoading[`${record.id}-done`] ? (
@@ -696,6 +893,128 @@ Management Team`;
               </table>
             </div>
           </div>
+          {showExtendPopup && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+              <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Extend PIP Period
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowExtendPopup(false);
+                      setSelectedPIPRecord(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-blue-50 p-3 rounded-md">
+                    <p className="text-sm text-blue-800">
+                      <strong>Employee:</strong>{" "}
+                      {selectedPIPRecord?.employeeName}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Start Date
+                      </label>
+                      <input
+                        type="date"
+                        value={extendForm.startDate}
+                        onChange={(e) =>
+                          handleExtendFormChange("startDate", e.target.value)
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        End Date
+                      </label>
+                      <input
+                        type="date"
+                        value={extendForm.endDate}
+                        onChange={(e) =>
+                          handleExtendFormChange("endDate", e.target.value)
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Total Days
+                      </label>
+                      <input
+                        type="text"
+                        value={extendForm.totalDays}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      onClick={() => {
+                        setShowExtendPopup(false);
+                        setSelectedPIPRecord(null);
+                      }}
+                      className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleExtendSubmit}
+                      disabled={pipActionLoading["extend-submit"]}
+                      className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {pipActionLoading["extend-submit"] ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                          Update Dates
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -747,14 +1066,8 @@ Management Team`;
               onClick={handlePIPClick}
               className="space-x-2 px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 flex items-center"
             >
-            <Activity size={18} />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              PIP
+              <Activity size={18} />
+              <span>PIP</span>
             </button>
             {/* <button
               onClick={
@@ -1087,6 +1400,46 @@ Management Team`;
                 />
               </div>
 
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={emailForm.startDate}
+                    onChange={(e) =>
+                      handleEmailFormChange("startDate", e.target.value)
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={emailForm.endDate}
+                    onChange={(e) =>
+                      handleEmailFormChange("endDate", e.target.value)
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Total Days
+                  </label>
+                  <input
+                    type="text"
+                    value={emailForm.totalDays}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Subject
@@ -1119,7 +1472,10 @@ Management Team`;
 
               <div className="flex justify-end space-x-3 pt-4">
                 <button
-                  onClick={() => setShowEmailPopup(false)}
+                  onClick={() => {
+                    setShowEmailPopup(false);
+                    setIsNewPIPRecord(false); // Reset the flag when canceling
+                  }}
                   className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
                 >
                   Cancel
