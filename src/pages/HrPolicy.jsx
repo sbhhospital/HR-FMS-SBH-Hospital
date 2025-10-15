@@ -1,8 +1,8 @@
 import React from 'react';
-import picture1 from '../assets/picture1.png';
-import picture2 from '../assets/picture2.jpg';
-import logo from '../assets/logo.png';
-import hrPolicyPdf from '../Assets/HR_POLICY_SBH_FINAL.pdf'
+import picture1 from '../Assets/Picture1.png';
+import picture2 from '../Assets/Picture2.jpg';
+import logo from '../Assets/logo.png';
+import hrPolicyPdf from '../Assets/HR_POLICY_SBH_FINAL.pdf';
 
 const HrPolicy = () => {
   const handleDownload = () => {
