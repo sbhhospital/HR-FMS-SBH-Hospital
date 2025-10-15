@@ -11,6 +11,7 @@ import bgImage6 from "../Assets/06.jpg";
 import bgImage7 from "../Assets/07.jpg";
 import bgImage8 from "../Assets/08.jpg";
 import bgImage9 from "../Assets/09.jpg";
+import bgImage10 from "../Assets/10.jpg";
 
 export default function JobPoster() {
   const location = useLocation();
@@ -93,12 +94,12 @@ const downloadPoster = () => {
 };
 
   // Background images
-  const backgrounds = [bgImage1, bgImage2, bgImage3, bgImage4, bgImage5, bgImage6, bgImage7, bgImage8, bgImage9];
+  const backgrounds = [bgImage1, bgImage2, bgImage3, bgImage4, bgImage5, bgImage6, bgImage7, bgImage8, bgImage9, bgImage10];
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
       <h1 className="text-3xl font-bold text-black mb-6 text">
-        Hiring Poster Generator
+        Hiring Creative Generator
       </h1>
 
       {/* Show indent info if available */}
@@ -363,27 +364,51 @@ const downloadPoster = () => {
                 </div>
               </>
             )}
+
+            {/* Design 10 */}
+            {design === 10 && (
+              <>
+                <div className="oswald-text1 absolute left-14 top-[145px] text-center text-black font-bold text-3xl uppercase tracking-wide max-w-[60%] break-words leading-[1]">
+                  {details.title}
+                </div>
+                <div className="text absolute left-28 top-[230px] text-white text-xs">
+                  {details.qualification}
+                </div>
+                <div className="text absolute left-28 top-[278px] text-white text-xs">
+                  {details.experience}
+                </div>
+                <div className="text absolute left-28 top-[300px] text-white text-xs">
+                  {details.salary}
+                </div>
+                <div className="text absolute left-28 top-[324px] text-white text-xs">
+                  {details.location}
+                </div>
+                <div className="text absolute left-28 top-[254px] text-white text-xs">
+                  {details.note}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Buttons just below the poster */}
           <div className="flex gap-4 mt-6">
             <button
               onClick={downloadPoster}
-              className="bg-yellow-500 text-black font-bold px-6 py-3 rounded-xl shadow-lg hover:bg-yellow-400"
+              className="text bg-yellow-500 text-black px-6 py-3 rounded-xl shadow-lg hover:bg-yellow-400"
             >
               Download Creative
             </button>
             <button
-              onClick={() => setDesign(design === 1 ? 9 : design - 1)}
-              className="bg-blue-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:bg-blue-500"
+              onClick={() => setDesign(design === 1 ? 10 : design - 1)}
+              className="bg-blue-600 text-white font-bold p-3 rounded-full shadow-lg hover:bg-blue-500"
             >
-              <ChevronLeft/>
+              <ChevronLeft />
             </button>
             <button
-              onClick={() => setDesign(design === 9 ? 1 : design + 1)}
-              className="bg-blue-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:bg-blue-500"
+              onClick={() => setDesign(design === 10 ? 1 : design + 1)}
+              className="bg-blue-600 text-white font-bold p-3 rounded-full shadow-lg hover:bg-blue-500"
             >
-              <ChevronRight/>
+              <ChevronRight />
             </button>
           </div>
         </div>

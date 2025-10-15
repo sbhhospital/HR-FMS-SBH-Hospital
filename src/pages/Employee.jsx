@@ -96,9 +96,10 @@ const Employee = () => {
         department: row[20] || "", // Column U (index 20)
         equipment: row[21] || "", // Column V (index 21)
         aadharNo: row[22] || "", // Column W (index 22) - Fixed index
-        // Keep existing filter fields
         columnAA: row[26] || "",
         columnY: row[24] || "",
+        unit: row[39] || "",
+        panCardNo : row[40] || "",
       }));
 
       // Filter logic: Column AQ has value AND Column AO is null/empty
@@ -288,6 +289,9 @@ const Employee = () => {
                         Designation
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Unit
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Aadhar Photo
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -334,6 +338,9 @@ const Employee = () => {
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Aadhar No
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Pan Card No
                       </th>
                     </tr>
                   </thead>
@@ -383,6 +390,9 @@ const Employee = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {item.designation}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {item.unit}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {item.aadharPhoto ? (
@@ -464,6 +474,9 @@ const Employee = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {item.aadharNo || "-"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {item.panCardNo || "-"}
                           </td>
                         </tr>
                       ))

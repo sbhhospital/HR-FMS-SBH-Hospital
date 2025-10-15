@@ -36,7 +36,7 @@ const [shareFormData, setShareFormData] = useState({
     salary: '',
     aadharFrontPhoto: null,
     aadharBackPhoto: null,
-    panCard: null,
+    panCardNumber : '',
     candidatePhoto: null,
     currentAddress: '',
     addressAsPerAadhar: '',
@@ -805,6 +805,7 @@ const handleJoiningSubmit = async (e) => {
     rowData[25] = "";
     rowData[26] = selectedItem.actualDate || formattedTimestamp; // Column AA: Actual Date
     rowData[38] = fileUrls.salarySlip || "";    // Column AM: Last Salary Slip
+    rowData[40] = joiningFormData.panCardNumber || ""; // Column AO: PAN Card Number - Add this line
 
     await postToJoiningSheet(rowData);
 
@@ -1252,6 +1253,21 @@ const handleJoiningSubmit = async (e) => {
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
                   />
                 </div>
+
+                {/* Add PAN Card Number Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    PAN Card Number
+                  </label>
+                  <input
+                    type="text"
+                    name="panCardNumber"
+                    value={joiningFormData.panCardNumber}
+                    onChange={handleJoiningInputChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Current Bank Account No
